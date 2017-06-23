@@ -88,18 +88,18 @@ func (s *OIDCSuite) TestUnmarshal(c *check.C) {
 			RedirectURL:  "https://localhost:3080/v1/webapi/oidc/callback",
 			Display:      "whatever",
 			Scope:        []string{"roles"},
-			ClaimsToRoles: []ClaimMapping{
+			ClaimsToServiceRoles: []ClaimMapping{
 				ClaimMapping{
 					Claim: "roles",
 					Value: "teleport-user",
-					RoleTemplate: &RoleV2{
-						Kind:    KindRole,
+					ServiceRoleTemplate: &ServiceRoleV2{
+						Kind:    KindServiceRole,
 						Version: V2,
 						Metadata: Metadata{
 							Name:      `{{index . "email"}}`,
 							Namespace: defaults.Namespace,
 						},
-						Spec: RoleSpecV2{
+						Spec: ServiceRoleSpecV2{
 							Namespaces:    []string{"default"},
 							MaxSessionTTL: NewDuration(90 * 60 * time.Minute),
 							Logins:        []string{`{{index . "nickname"}}`, `root`},
@@ -179,18 +179,18 @@ func (s *OIDCSuite) TestRoleFromTemplate(c *check.C) {
 			RedirectURL:  "https://localhost:3080/v1/webapi/oidc/callback",
 			Display:      "whatever",
 			Scope:        []string{"roles"},
-			ClaimsToRoles: []ClaimMapping{
+			ClaimsToServiceRoles: []ClaimMapping{
 				ClaimMapping{
 					Claim: "roles",
 					Value: "teleport-user",
-					RoleTemplate: &RoleV2{
-						Kind:    KindRole,
+					ServiceRoleTemplate: &ServiceRoleV2{
+						Kind:    KindServiceRole,
 						Version: V2,
 						Metadata: Metadata{
 							Name:      `{{index . "email"}}`,
 							Namespace: defaults.Namespace,
 						},
-						Spec: RoleSpecV2{
+						Spec: ServiceRoleSpecV2{
 							MaxSessionTTL: NewDuration(30 * 60 * time.Minute),
 							Logins:        []string{`{{index . "nickname"}}`, `root`},
 							NodeLabels:    map[string]string{"*": "*"},
@@ -208,10 +208,10 @@ func (s *OIDCSuite) TestRoleFromTemplate(c *check.C) {
 	claims.Add("nickname", "foo")
 	claims.Add("full_name", "foo bar")
 
-	role, err := oidcConnector.RoleFromTemplate(claims)
+	role, err := oidcConnector.ServiceRoleFromTemplate(claims)
 	c.Assert(err, check.IsNil)
 
-	outRole, err := NewRole("foo@example.com", RoleSpecV2{
+	outRole, err := NewServiceRole("foo@example.com", ServiceRoleSpecV2{
 		Logins:        []string{"foo", "root"},
 		MaxSessionTTL: NewDuration(30 * time.Hour),
 		NodeLabels:    map[string]string{"*": "*"},

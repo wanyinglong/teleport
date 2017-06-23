@@ -94,8 +94,8 @@ func (s *ServicesSuite) TestToken(c *C) {
 	s.suite.TokenCRUD(c)
 }
 
-func (s *ServicesSuite) TestRoles(c *C) {
-	s.suite.RolesCRUD(c)
+func (s *ServicesSuite) TestServiceRoles(c *C) {
+	s.suite.ServiceRolesCRUD(c)
 }
 
 func (s *ServicesSuite) TestU2FCRUD(c *C) {

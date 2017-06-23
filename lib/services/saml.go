@@ -51,16 +51,16 @@ type SAMLConnector interface {
 	GetDisplay() string
 	// SetDisplay sets friendly name for this provider.
 	SetDisplay(string)
-	// GetAttributesToRoles returns attributes to roles mapping
-	GetAttributesToRoles() []AttributeMapping
-	// SetAttributesToRoles sets attributes to roles mapping
-	SetAttributesToRoles(mapping []AttributeMapping)
+	// GetAttributesToServiceRoles returns attributes to roles mapping
+	GetAttributesToServiceRoles() []AttributeMapping
+	// SetAttributesToServiceRoles sets attributes to roles mapping
+	SetAttributesToServiceRoles(mapping []AttributeMapping)
 	// GetAttributes returns list of attributes expected by mappings
 	GetAttributes() []string
 	// MapAttributes maps attributes to roles
 	MapAttributes(assertionInfo saml2.AssertionInfo) []string
-	// RoleFromTemplate creates a role from a template and claims.
-	RoleFromTemplate(assertionInfo saml2.AssertionInfo) (Role, error)
+	// ServiceRoleFromTemplate creates a role from a template and claims.
+	ServiceRoleFromTemplate(assertionInfo saml2.AssertionInfo) (ServiceRole, error)
 	// Check checks SAML connector for errors
 	CheckAndSetDefaults() error
 	// SetIssuer sets issuer
@@ -307,20 +307,20 @@ func (o *SAMLConnectorV2) Equals(other SAMLConnector) bool {
 			return false
 		}
 	}
-	mappings := o.GetAttributesToRoles()
-	otherMappings := other.GetAttributesToRoles()
+	mappings := o.GetAttributesToServiceRoles()
+	otherMappings := other.GetAttributesToServiceRoles()
 	if len(mappings) != len(otherMappings) {
 		return false
 	}
 	for i := range mappings {
 		a, b := mappings[i], otherMappings[i]
-		if a.Name != b.Name || a.Value != b.Value || !utils.StringSlicesEqual(a.Roles, b.Roles) {
+		if a.Name != b.Name || a.Value != b.Value || !utils.StringSlicesEqual(a.ServiceRoles, b.ServiceRoles) {
 			return false
 		}
-		if (a.RoleTemplate != nil && b.RoleTemplate == nil) || (a.RoleTemplate == nil && b.RoleTemplate != nil) {
+		if (a.ServiceRoleTemplate != nil && b.ServiceRoleTemplate == nil) || (a.ServiceRoleTemplate == nil && b.ServiceRoleTemplate != nil) {
 			return false
 		}
-		if a.RoleTemplate != nil && !a.RoleTemplate.Equals(b.RoleTemplate) {
+		if a.ServiceRoleTemplate != nil && !a.ServiceRoleTemplate.Equals(b.ServiceRoleTemplate) {
 			return false
 		}
 	}
@@ -388,14 +388,14 @@ func (o *SAMLConnectorV2) GetDisplay() string {
 	return o.GetName()
 }
 
-// GetAttributesToRoles returns attributes to roles mapping
-func (o *SAMLConnectorV2) GetAttributesToRoles() []AttributeMapping {
-	return o.Spec.AttributesToRoles
+// GetAttributesToServiceRoles returns attributes to roles mapping
+func (o *SAMLConnectorV2) GetAttributesToServiceRoles() []AttributeMapping {
+	return o.Spec.AttributesToServiceRoles
 }
 
-// SetAttributesToRoles sets attributes to roles mapping
-func (o *SAMLConnectorV2) SetAttributesToRoles(mapping []AttributeMapping) {
-	o.Spec.AttributesToRoles = mapping
+// SetAttributesToServiceRoles sets attributes to roles mapping
+func (o *SAMLConnectorV2) SetAttributesToServiceRoles(mapping []AttributeMapping) {
+	o.Spec.AttributesToServiceRoles = mapping
 }
 
 // SetProvider sets the identity provider.
@@ -411,7 +411,7 @@ func (o *SAMLConnectorV2) GetProvider() string {
 // GetAttributes returns list of attributes expected by mappings
 func (o *SAMLConnectorV2) GetAttributes() []string {
 	var out []string
-	for _, mapping := range o.Spec.AttributesToRoles {
+	for _, mapping := range o.Spec.AttributesToServiceRoles {
 		out = append(out, mapping.Name)
 	}
 	return utils.Deduplicate(out)
@@ -420,14 +420,14 @@ func (o *SAMLConnectorV2) GetAttributes() []string {
 // MapClaims maps claims to roles
 func (o *SAMLConnectorV2) MapAttributes(assertionInfo saml2.AssertionInfo) []string {
 	var roles []string
-	for _, mapping := range o.Spec.AttributesToRoles {
+	for _, mapping := range o.Spec.AttributesToServiceRoles {
 		for _, attr := range assertionInfo.Values {
 			if attr.Name != mapping.Name {
 				continue
 			}
 			for _, value := range attr.Values {
 				if value.Value == mapping.Value {
-					roles = append(roles, mapping.Roles...)
+					roles = append(roles, mapping.ServiceRoles...)
 				}
 			}
 		}
@@ -479,10 +479,10 @@ func executeSAMLSliceTemplate(raw []string, assertion map[string]string) ([]stri
 	return sl, nil
 }
 
-// RoleFromTemplate creates a role from a template and claims.
-func (o *SAMLConnectorV2) RoleFromTemplate(assertionInfo saml2.AssertionInfo) (Role, error) {
+// ServiceRoleFromTemplate creates a role from a template and claims.
+func (o *SAMLConnectorV2) ServiceRoleFromTemplate(assertionInfo saml2.AssertionInfo) (ServiceRole, error) {
 	assertionMap := buildAssertionMap(assertionInfo)
-	for _, mapping := range o.Spec.AttributesToRoles {
+	for _, mapping := range o.Spec.AttributesToServiceRoles {
 		for assrName, assrValue := range assertionMap {
 			// match assertion name
 			if assrName != mapping.Name {
@@ -495,7 +495,7 @@ func (o *SAMLConnectorV2) RoleFromTemplate(assertionInfo saml2.AssertionInfo) (R
 			}
 
 			// claim name and value match, if a role template exists, execute template
-			roleTemplate := mapping.RoleTemplate
+			roleTemplate := mapping.ServiceRoleTemplate
 			if roleTemplate != nil {
 				// at the moment, only allow templating for role name and logins
 				executedName, err := executeSAMLStringTemplate(roleTemplate.GetName(), assertionMap)
@@ -614,19 +614,19 @@ func (o *SAMLConnectorV2) GetServiceProvider(clock clockwork.Clock) (*saml2.SAML
 		return nil, trace.Wrap(err)
 	}
 	// make sure claim mappings have either roles or a role template
-	for _, v := range o.Spec.AttributesToRoles {
-		hasRoles := false
-		if len(v.Roles) > 0 {
-			hasRoles = true
+	for _, v := range o.Spec.AttributesToServiceRoles {
+		hasServiceRoles := false
+		if len(v.ServiceRoles) > 0 {
+			hasServiceRoles = true
 		}
-		hasRoleTemplate := false
-		if v.RoleTemplate != nil {
-			hasRoleTemplate = true
+		hasServiceRoleTemplate := false
+		if v.ServiceRoleTemplate != nil {
+			hasServiceRoleTemplate = true
 		}
 
 		// we either need to have roles or role templates not both or neither
-		// ! ( hasRoles XOR hasRoleTemplate )
-		if hasRoles == hasRoleTemplate {
+		// ! ( hasServiceRoles XOR hasServiceRoleTemplate )
+		if hasServiceRoles == hasServiceRoleTemplate {
 			return nil, trace.BadParameter("need roles or role template (not both or none)")
 		}
 	}
@@ -717,8 +717,8 @@ type SAMLConnectorSpecV2 struct {
 	EntityDescriptor string `json:"entity_descriptor"`
 	// EntityDescriptor points to a URL that supplies a configuration XML.
 	EntityDescriptorURL string `json:"entity_descriptor_url"`
-	// AttriburesToRoles is a list of mappings of attribute statements to roles
-	AttributesToRoles []AttributeMapping `json:"attributes_to_roles"`
+	// AttriburesToServiceRoles is a list of mappings of attribute statements to roles
+	AttributesToServiceRoles []AttributeMapping `json:"attributes_to_roles"`
 	// SigningKeyPair is x509 key pair used to sign AuthnRequest
 	SigningKeyPair *SigningKeyPair `json:"signing_key_pair,omitempty"`
 	// Provider is the external identity provider.
@@ -765,11 +765,11 @@ type AttributeMapping struct {
 	Name string `json:"name"`
 	// Value is attribute statement value to match
 	Value string `json:"value"`
-	// Roles is a list of teleport roles to match
-	Roles []string `json:"roles,omitempty"`
-	// RoleTemplate is a template for a role that will be filled
+	// ServiceRoles is a list of teleport roles to match
+	ServiceRoles []string `json:"roles,omitempty"`
+	// ServiceRoleTemplate is a template for a role that will be filled
 	// with data from claims.
-	RoleTemplate *RoleV2 `json:"role_template,omitempty"`
+	ServiceRoleTemplate *ServiceRoleV2 `json:"role_template,omitempty"`
 }
 
 // AttribueMappingSchema is JSON schema for claim mapping
@@ -788,7 +788,7 @@ var AttributeMappingSchema = fmt.Sprintf(`{
     },
     "role_template": %v
   }
-}`, GetRoleSchema(""))
+}`, GetServiceRoleSchema(""))
 
 // SigningKeyPairSchema
 var SigningKeyPairSchema = `{

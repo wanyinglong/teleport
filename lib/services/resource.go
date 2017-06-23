@@ -55,8 +55,8 @@ const (
 	// KindHostCert is a host certificate
 	KindHostCert = "host_cert"
 
-	// KindRole is a role resource
-	KindRole = "role"
+	// KindServiceRole is a role resource
+	KindServiceRole = "role"
 
 	// KindOIDC is OIDC connector resource
 	KindOIDC = "oidc"
@@ -215,7 +215,7 @@ type ResourceHeader struct {
 	Kind string `json:"kind"`
 	// Version is a resource version
 	Version string `json:"version"`
-	// Metadata is Role metadata
+	// Metadata is resource metadata
 	Metadata Metadata `json:"metadata"`
 }
 
@@ -310,7 +310,7 @@ func ParseShortcut(in string) (string, error) {
 	}
 	switch strings.ToLower(in) {
 	case "roles":
-		return KindRole, nil
+		return KindServiceRole, nil
 	case "namespaces", "ns":
 		return KindNamespace, nil
 	case "auth_servers", "auth":

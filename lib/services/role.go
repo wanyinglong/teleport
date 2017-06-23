@@ -32,32 +32,32 @@ import (
 	"github.com/jonboulle/clockwork"
 )
 
-// RoleNameForUser returns role name associated with user
-func RoleNameForUser(name string) string {
+// ServiceRoleNameForUser returns role name associated with user
+func ServiceRoleNameForUser(name string) string {
 	return "user:" + name
 }
 
-// RoleNameForCertAuthority returns role name associated with cert authority
-func RoleNameForCertAuthority(name string) string {
+// ServiceRoleNameForCertAuthority returns role name associated with cert authority
+func ServiceRoleNameForCertAuthority(name string) string {
 	return "ca:" + name
 }
 
-// RoleForUser creates role using AllowedLogins parameter
-func RoleForUser(u User) Role {
-	return &RoleV2{
-		Kind:    KindRole,
+// ServiceRoleForUser creates role using AllowedLogins parameter
+func ServiceRoleForUser(u User) ServiceRole {
+	return &ServiceRoleV2{
+		Kind:    KindServiceRole,
 		Version: V2,
 		Metadata: Metadata{
-			Name:      RoleNameForUser(u.GetName()),
+			Name:      ServiceRoleNameForUser(u.GetName()),
 			Namespace: defaults.Namespace,
 		},
-		Spec: RoleSpecV2{
+		Spec: ServiceRoleSpecV2{
 			MaxSessionTTL: NewDuration(defaults.MaxCertDuration),
 			NodeLabels:    map[string]string{Wildcard: Wildcard},
 			Namespaces:    []string{defaults.Namespace},
 			Resources: map[string][]string{
 				KindSession:       RO(),
-				KindRole:          RO(),
+				KindServiceRole:   RO(),
 				KindNode:          RO(),
 				KindAuthServer:    RO(),
 				KindReverseTunnel: RO(),
@@ -67,16 +67,16 @@ func RoleForUser(u User) Role {
 	}
 }
 
-// RoleForCertauthority creates role using AllowedLogins parameter
-func RoleForCertAuthority(ca CertAuthority) Role {
-	return &RoleV2{
-		Kind:    KindRole,
+// ServiceRoleForCertauthority creates role using AllowedLogins parameter
+func ServiceRoleForCertAuthority(ca CertAuthority) ServiceRole {
+	return &ServiceRoleV2{
+		Kind:    KindServiceRole,
 		Version: V2,
 		Metadata: Metadata{
-			Name:      RoleNameForCertAuthority(ca.GetClusterName()),
+			Name:      ServiceRoleNameForCertAuthority(ca.GetClusterName()),
 			Namespace: defaults.Namespace,
 		},
-		Spec: RoleSpecV2{
+		Spec: ServiceRoleSpecV2{
 			MaxSessionTTL: NewDuration(defaults.MaxCertDuration),
 			NodeLabels:    map[string]string{Wildcard: Wildcard},
 			Namespaces:    []string{defaults.Namespace},
@@ -91,35 +91,35 @@ func RoleForCertAuthority(ca CertAuthority) Role {
 	}
 }
 
-// ConvertV1CertAuthority converts V1 cert authority for new CA and Role
-func ConvertV1CertAuthority(v1 *CertAuthorityV1) (CertAuthority, Role) {
+// ConvertV1CertAuthority converts V1 cert authority for new CA and ServiceRole
+func ConvertV1CertAuthority(v1 *CertAuthorityV1) (CertAuthority, ServiceRole) {
 	ca := v1.V2()
-	role := RoleForCertAuthority(ca)
+	role := ServiceRoleForCertAuthority(ca)
 	role.SetLogins(v1.AllowedLogins)
-	ca.AddRole(role.GetName())
+	ca.AddServiceRole(role.GetName())
 	return ca, role
 }
 
 // Access service manages roles and permissions
 type Access interface {
-	// GetRoles returns a list of roles
-	GetRoles() ([]Role, error)
+	// GetServiceRoles returns a list of roles
+	GetServiceRoles() ([]ServiceRole, error)
 
-	// UpsertRole creates or updates role
-	UpsertRole(role Role, ttl time.Duration) error
+	// UpsertServiceRole creates or updates role
+	UpsertServiceRole(role ServiceRole, ttl time.Duration) error
 
-	// DeleteAllRoles deletes all roles
-	DeleteAllRoles() error
+	// DeleteAllServiceRoles deletes all roles
+	DeleteAllServiceRoles() error
 
-	// GetRole returns role by name
-	GetRole(name string) (Role, error)
+	// GetServiceRole returns role by name
+	GetServiceRole(name string) (ServiceRole, error)
 
-	// DeleteRole deletes role by name
-	DeleteRole(name string) error
+	// DeleteServiceRole deletes role by name
+	DeleteServiceRole(name string) error
 }
 
-// Role contains a set of permissions or settings
-type Role interface {
+// ServiceRole contains a set of permissions or settings
+type ServiceRole interface {
 	// Resource provides common resource methods
 	Resource
 	// GetMaxSessionTTL is a maximum SSH or Web session TTL
@@ -152,23 +152,23 @@ type Role interface {
 	// CheckAndSetDefaults checks and set default values for missing fields.
 	CheckAndSetDefaults() error
 	// Equals returns true if roles are equal
-	Equals(other Role) bool
+	Equals(other ServiceRole) bool
 }
 
-// RoleV2 represents role resource specification
-type RoleV2 struct {
+// ServiceRoleV2 represents role resource specification
+type ServiceRoleV2 struct {
 	// Kind is a resource kind - always resource
 	Kind string `json:"kind"`
 	// Version is a resource version
 	Version string `json:"version"`
-	// Metadata is Role metadata
+	// Metadata is ServiceRole metadata
 	Metadata Metadata `json:"metadata"`
 	// Spec contains role specification
-	Spec RoleSpecV2 `json:"spec"`
+	Spec ServiceRoleSpecV2 `json:"spec"`
 }
 
 // Equals returns true if roles are equal
-func (r *RoleV2) Equals(other Role) bool {
+func (r *ServiceRoleV2) Equals(other ServiceRole) bool {
 	if !utils.StringSlicesEqual(r.GetLogins(), other.GetLogins()) {
 		return false
 	}
@@ -191,7 +191,7 @@ func (r *RoleV2) Equals(other Role) bool {
 }
 
 // SetResource sets resource rule
-func (r *RoleV2) SetResource(kind string, actions []string) {
+func (r *ServiceRoleV2) SetResource(kind string, actions []string) {
 	if r.Spec.Resources == nil {
 		r.Spec.Resources = make(map[string][]string)
 	}
@@ -199,98 +199,98 @@ func (r *RoleV2) SetResource(kind string, actions []string) {
 }
 
 // RemoveResource deletes resource entry
-func (r *RoleV2) RemoveResource(kind string) {
+func (r *ServiceRoleV2) RemoveResource(kind string) {
 	delete(r.Spec.Resources, kind)
 }
 
 // SetLogins sets logins for role
-func (r *RoleV2) SetLogins(logins []string) {
+func (r *ServiceRoleV2) SetLogins(logins []string) {
 	r.Spec.Logins = logins
 }
 
 // SetNodeLabels sets node labels for role
-func (r *RoleV2) SetNodeLabels(labels map[string]string) {
+func (r *ServiceRoleV2) SetNodeLabels(labels map[string]string) {
 	r.Spec.NodeLabels = labels
 }
 
 // SetMaxSessionTTL sets a maximum TTL for SSH or Web session
-func (r *RoleV2) SetMaxSessionTTL(duration time.Duration) {
+func (r *ServiceRoleV2) SetMaxSessionTTL(duration time.Duration) {
 	r.Spec.MaxSessionTTL.Duration = duration
 }
 
 // SetExpiry sets expiry time for the object
-func (r *RoleV2) SetExpiry(expires time.Time) {
+func (r *ServiceRoleV2) SetExpiry(expires time.Time) {
 	r.Metadata.SetExpiry(expires)
 }
 
 // Expires retuns object expiry setting
-func (r *RoleV2) Expiry() time.Time {
+func (r *ServiceRoleV2) Expiry() time.Time {
 	return r.Metadata.Expiry()
 }
 
 // SetTTL sets Expires header using realtime clock
-func (r *RoleV2) SetTTL(clock clockwork.Clock, ttl time.Duration) {
+func (r *ServiceRoleV2) SetTTL(clock clockwork.Clock, ttl time.Duration) {
 	r.Metadata.SetTTL(clock, ttl)
 }
 
 // SetName is a shortcut for SetMetadata().Name
-func (r *RoleV2) SetName(s string) {
+func (r *ServiceRoleV2) SetName(s string) {
 	r.Metadata.Name = s
 }
 
 // GetName returns role name and is a shortcut for GetMetadata().Name
-func (r *RoleV2) GetName() string {
+func (r *ServiceRoleV2) GetName() string {
 	return r.Metadata.Name
 }
 
 // GetMetadata returns role metadata
-func (r *RoleV2) GetMetadata() Metadata {
+func (r *ServiceRoleV2) GetMetadata() Metadata {
 	return r.Metadata
 }
 
 // GetMaxSessionTTL is a maximum SSH or Web session TTL
-func (r *RoleV2) GetMaxSessionTTL() Duration {
+func (r *ServiceRoleV2) GetMaxSessionTTL() Duration {
 	return r.Spec.MaxSessionTTL
 }
 
 // GetLogins returns a list of linux logins allowed for this role
-func (r *RoleV2) GetLogins() []string {
+func (r *ServiceRoleV2) GetLogins() []string {
 	return r.Spec.Logins
 }
 
 // GetNodeLabels returns a list of matchign nodes this role has access to
-func (r *RoleV2) GetNodeLabels() map[string]string {
+func (r *ServiceRoleV2) GetNodeLabels() map[string]string {
 	return r.Spec.NodeLabels
 }
 
 // GetNamespaces returns a list of namespaces this role has access to
-func (r *RoleV2) GetNamespaces() []string {
+func (r *ServiceRoleV2) GetNamespaces() []string {
 	return r.Spec.Namespaces
 }
 
 // SetNamespaces sets a list of namespaces this role has access to
-func (r *RoleV2) SetNamespaces(namespaces []string) {
+func (r *ServiceRoleV2) SetNamespaces(namespaces []string) {
 	r.Spec.Namespaces = namespaces
 }
 
 // GetResources returns access to resources
-func (r *RoleV2) GetResources() map[string][]string {
+func (r *ServiceRoleV2) GetResources() map[string][]string {
 	return r.Spec.Resources
 }
 
 // CanForwardAgent returns true if this role is allowed
 // to request agent forwarding
-func (r *RoleV2) CanForwardAgent() bool {
+func (r *ServiceRoleV2) CanForwardAgent() bool {
 	return r.Spec.ForwardAgent
 }
 
 // SetForwardAgent sets forward agent property
-func (r *RoleV2) SetForwardAgent(forwardAgent bool) {
+func (r *ServiceRoleV2) SetForwardAgent(forwardAgent bool) {
 	r.Spec.ForwardAgent = forwardAgent
 }
 
 // Check checks validity of all parameters and sets defaults
-func (r *RoleV2) CheckAndSetDefaults() error {
+func (r *ServiceRoleV2) CheckAndSetDefaults() error {
 	// make sure we have defaults for all fields
 	if r.Metadata.Name == "" {
 		return trace.BadParameter("missing parameter Name")
@@ -313,7 +313,7 @@ func (r *RoleV2) CheckAndSetDefaults() error {
 	if r.Spec.Resources == nil {
 		r.Spec.Resources = map[string][]string{
 			KindSession:       RO(),
-			KindRole:          RO(),
+			KindServiceRole:   RO(),
 			KindNode:          RO(),
 			KindAuthServer:    RO(),
 			KindReverseTunnel: RO(),
@@ -339,13 +339,13 @@ func (r *RoleV2) CheckAndSetDefaults() error {
 	return nil
 }
 
-func (r *RoleV2) String() string {
-	return fmt.Sprintf("Role(Name=%v,MaxSessionTTL=%v,Logins=%v,NodeLabels=%v,Namespaces=%v,Resources=%v,CanForwardAgent=%v)",
+func (r *ServiceRoleV2) String() string {
+	return fmt.Sprintf("ServiceRole(Name=%v,MaxSessionTTL=%v,Logins=%v,NodeLabels=%v,Namespaces=%v,Resources=%v,CanForwardAgent=%v)",
 		r.GetName(), r.GetMaxSessionTTL(), r.GetLogins(), r.GetNodeLabels(), r.GetNamespaces(), r.GetResources(), r.CanForwardAgent())
 }
 
-// RoleSpecV2 is role specification for RoleV2
-type RoleSpecV2 struct {
+// ServiceRoleSpecV2 is role specification for ServiceRoleV2
+type ServiceRoleSpecV2 struct {
 	// MaxSessionTTL is a maximum SSH or Web session TTL
 	MaxSessionTTL Duration `json:"max_session_ttl" yaml:"max_session_ttl"`
 	// Logins is a list of linux logins allowed for this role
@@ -379,13 +379,13 @@ type AccessChecker interface {
 	CanForwardAgents() bool
 }
 
-// FromSpec returns new RoleSet created from spec
-func FromSpec(name string, spec RoleSpecV2) (RoleSet, error) {
-	role, err := NewRole(name, spec)
+// FromSpec returns new ServiceRoleSet created from spec
+func FromSpec(name string, spec ServiceRoleSpecV2) (ServiceRoleSet, error) {
+	role, err := NewServiceRole(name, spec)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	return NewRoleSet(role), nil
+	return NewServiceRoleSet(role), nil
 }
 
 // RW returns read write action list
@@ -398,10 +398,10 @@ func RO() []string {
 	return []string{ActionRead}
 }
 
-// NewRole constructs new standard role
-func NewRole(name string, spec RoleSpecV2) (Role, error) {
-	role := RoleV2{
-		Kind:    KindRole,
+// NewServiceRole constructs new standard role
+func NewServiceRole(name string, spec ServiceRoleSpecV2) (ServiceRole, error) {
+	role := ServiceRoleV2{
+		Kind:    KindServiceRole,
 		Version: V2,
 		Metadata: Metadata{
 			Name:      name,
@@ -415,17 +415,17 @@ func NewRole(name string, spec RoleSpecV2) (Role, error) {
 	return &role, nil
 }
 
-// RoleGetter is an interface that defines GetRole method
-type RoleGetter interface {
-	// GetRole returns role by name
-	GetRole(name string) (Role, error)
+// ServiceRoleGetter is an interface that defines GetServiceRole method
+type ServiceRoleGetter interface {
+	// GetServiceRole returns role by name
+	GetServiceRole(name string) (ServiceRole, error)
 }
 
-// FetchRoles fetches roles by their names and returns role set
-func FetchRoles(roleNames []string, access RoleGetter) (RoleSet, error) {
-	var roles RoleSet
+// FetchServiceRoles fetches roles by their names and returns role set
+func FetchServiceRoles(roleNames []string, access ServiceRoleGetter) (ServiceRoleSet, error) {
+	var roles ServiceRoleSet
 	for _, roleName := range roleNames {
-		role, err := access.GetRole(roleName)
+		role, err := access.GetServiceRole(roleName)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
@@ -434,13 +434,13 @@ func FetchRoles(roleNames []string, access RoleGetter) (RoleSet, error) {
 	return roles, nil
 }
 
-// NewRoleSet returns new RoleSet based on the roles
-func NewRoleSet(roles ...Role) RoleSet {
+// NewServiceRoleSet returns new ServiceRoleSet based on the roles
+func NewServiceRoleSet(roles ...ServiceRole) ServiceRoleSet {
 	return roles
 }
 
-// RoleSet is a set of roles that implements access control functionality
-type RoleSet []Role
+// ServiceRoleSet is a set of roles that implements access control functionality
+type ServiceRoleSet []ServiceRole
 
 // MatchResourceAction tests if selector matches required resource action in a given namespace
 func MatchResourceAction(selector map[string][]string, resourceName, resourceAction string) bool {
@@ -506,7 +506,7 @@ func MatchLabels(selector map[string]string, target map[string]string) bool {
 
 // AdjustSessionTTL will reduce the requested ttl to lowest max allowed TTL
 // for this role set, otherwise it returns ttl unchanges
-func (set RoleSet) AdjustSessionTTL(ttl time.Duration) time.Duration {
+func (set ServiceRoleSet) AdjustSessionTTL(ttl time.Duration) time.Duration {
 	for _, role := range set {
 		if ttl > role.GetMaxSessionTTL().Duration {
 			ttl = role.GetMaxSessionTTL().Duration
@@ -517,7 +517,7 @@ func (set RoleSet) AdjustSessionTTL(ttl time.Duration) time.Duration {
 
 // CheckLogins checks if role set can login up to given duration
 // and returns a combined list of allowed logins
-func (set RoleSet) CheckLogins(ttl time.Duration) ([]string, error) {
+func (set ServiceRoleSet) CheckLogins(ttl time.Duration) ([]string, error) {
 	logins := make(map[string]bool)
 	var matchedTTL bool
 	for _, role := range set {
@@ -543,7 +543,7 @@ func (set RoleSet) CheckLogins(ttl time.Duration) ([]string, error) {
 
 // CheckAccessToServer checks if role set has access to server based
 // on combined role's selector and attempted login
-func (set RoleSet) CheckAccessToServer(login string, s Server) error {
+func (set ServiceRoleSet) CheckAccessToServer(login string, s Server) error {
 	var errs []error
 
 	for _, role := range set {
@@ -551,11 +551,11 @@ func (set RoleSet) CheckAccessToServer(login string, s Server) error {
 		matchLabels := MatchLabels(role.GetNodeLabels(), s.GetAllLabels())
 		matchLogin := MatchLogin(role.GetLogins(), login)
 		if matchNamespace && matchLabels && matchLogin {
-			log.Debugf("Role %v granted access to node %v", role.GetName(), s.GetHostname())
+			log.Debugf("ServiceRole %v granted access to node %v", role.GetName(), s.GetHostname())
 			return nil
 		}
 
-		errorMessage := fmt.Sprintf("Role %v denied access; match(namespace=%v, label=%v, login=%v)",
+		errorMessage := fmt.Sprintf("ServiceRole %v denied access; match(namespace=%v, label=%v, login=%v)",
 			role.GetName(), matchNamespace, matchLabels, matchLogin)
 		errs = append(errs, trace.AccessDenied(errorMessage))
 	}
@@ -564,7 +564,7 @@ func (set RoleSet) CheckAccessToServer(login string, s Server) error {
 }
 
 // CanForwardAgents returns true if role set allows forwarding agents
-func (set RoleSet) CanForwardAgents() bool {
+func (set ServiceRoleSet) CanForwardAgents() bool {
 	for _, role := range set {
 		if role.CanForwardAgent() {
 			return true
@@ -574,7 +574,7 @@ func (set RoleSet) CanForwardAgents() bool {
 }
 
 // CheckAgentForward checks if the role can request agent forward for this user
-func (set RoleSet) CheckAgentForward(login string) error {
+func (set ServiceRoleSet) CheckAgentForward(login string) error {
 	for _, role := range set {
 		for _, l := range role.GetLogins() {
 			if role.CanForwardAgent() && l == login {
@@ -585,7 +585,7 @@ func (set RoleSet) CheckAgentForward(login string) error {
 	return trace.AccessDenied("%v can not forward agent for %v", set, login)
 }
 
-func (set RoleSet) String() string {
+func (set ServiceRoleSet) String() string {
 	if len(set) == 0 {
 		return "user without assigned roles"
 	}
@@ -597,7 +597,7 @@ func (set RoleSet) String() string {
 }
 
 // CheckResourceAction checks if role set has access to this resource action
-func (set RoleSet) CheckResourceAction(resourceNamespace, resourceName, accessType string) error {
+func (set ServiceRoleSet) CheckResourceAction(resourceNamespace, resourceName, accessType string) error {
 	resourceNamespace = ProcessNamespace(resourceNamespace)
 	for _, role := range set {
 		matchNamespace := MatchNamespace(role.GetNamespaces(), resourceNamespace)
@@ -667,7 +667,7 @@ func (d *Duration) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-const RoleSpecSchemaTemplate = `{
+const ServiceRoleSpecSchemaTemplate = `{
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -700,81 +700,81 @@ const RoleSpecSchemaTemplate = `{
   }
 }`
 
-// GetRoleSchema returns role schema with optionally injected
+// GetServiceRoleSchema returns role schema with optionally injected
 // schema for extensions
-func GetRoleSchema(extensionSchema string) string {
+func GetServiceRoleSchema(extensionSchema string) string {
 	var roleSchema string
 	if extensionSchema == "" {
-		roleSchema = fmt.Sprintf(RoleSpecSchemaTemplate, ``)
+		roleSchema = fmt.Sprintf(ServiceRoleSpecSchemaTemplate, ``)
 	} else {
-		roleSchema = fmt.Sprintf(RoleSpecSchemaTemplate, ","+extensionSchema)
+		roleSchema = fmt.Sprintf(ServiceRoleSpecSchemaTemplate, ","+extensionSchema)
 	}
 	return fmt.Sprintf(V2SchemaTemplate, MetadataSchema, roleSchema)
 }
 
-// UnmarshalRole unmarshals role from JSON or YAML,
+// UnmarshalServiceRole unmarshals role from JSON or YAML,
 // sets defaults and checks the schema
-func UnmarshalRole(data []byte) (*RoleV2, error) {
+func UnmarshalServiceRole(data []byte) (*ServiceRoleV2, error) {
 	if len(data) == 0 {
 		return nil, trace.BadParameter("missing resource data")
 	}
-	var role RoleV2
-	if err := utils.UnmarshalWithSchema(GetRoleSchema(""), &role, data); err != nil {
+	var role ServiceRoleV2
+	if err := utils.UnmarshalWithSchema(GetServiceRoleSchema(""), &role, data); err != nil {
 		return nil, trace.BadParameter(err.Error())
 	}
 	utils.UTC(&role.Metadata.Expires)
 	return &role, nil
 }
 
-var roleMarshaler RoleMarshaler = &TeleportRoleMarshaler{}
+var roleMarshaler ServiceRoleMarshaler = &TeleportServiceRoleMarshaler{}
 
-func SetRoleMarshaler(m RoleMarshaler) {
+func SetServiceRoleMarshaler(m ServiceRoleMarshaler) {
 	marshalerMutex.Lock()
 	defer marshalerMutex.Unlock()
 	roleMarshaler = m
 }
 
-func GetRoleMarshaler() RoleMarshaler {
+func GetServiceRoleMarshaler() ServiceRoleMarshaler {
 	marshalerMutex.Lock()
 	defer marshalerMutex.Unlock()
 	return roleMarshaler
 }
 
-// RoleMarshaler implements marshal/unmarshal of Role implementations
+// ServiceRoleMarshaler implements marshal/unmarshal of ServiceRole implementations
 // mostly adds support for extended versions
-type RoleMarshaler interface {
-	// UnmarshalRole from binary representation
-	UnmarshalRole(bytes []byte) (Role, error)
-	// MarshalRole to binary representation
-	MarshalRole(u Role, opts ...MarshalOption) ([]byte, error)
+type ServiceRoleMarshaler interface {
+	// UnmarshalServiceRole from binary representation
+	UnmarshalServiceRole(bytes []byte) (ServiceRole, error)
+	// MarshalServiceRole to binary representation
+	MarshalServiceRole(u ServiceRole, opts ...MarshalOption) ([]byte, error)
 }
 
-type TeleportRoleMarshaler struct{}
+type TeleportServiceRoleMarshaler struct{}
 
-// UnmarshalRole unmarshals role from JSON
-func (*TeleportRoleMarshaler) UnmarshalRole(bytes []byte) (Role, error) {
-	return UnmarshalRole(bytes)
+// UnmarshalServiceRole unmarshals role from JSON
+func (*TeleportServiceRoleMarshaler) UnmarshalServiceRole(bytes []byte) (ServiceRole, error) {
+	return UnmarshalServiceRole(bytes)
 }
 
-// MarshalRole marshalls role into JSON
-func (*TeleportRoleMarshaler) MarshalRole(u Role, opts ...MarshalOption) ([]byte, error) {
+// MarshalServiceRole marshalls role into JSON
+func (*TeleportServiceRoleMarshaler) MarshalServiceRole(u ServiceRole, opts ...MarshalOption) ([]byte, error) {
 	return json.Marshal(u)
 }
 
-// SortedRoles sorts roles by name
-type SortedRoles []Role
+// SortedServiceRoles sorts roles by name
+type SortedServiceRoles []ServiceRole
 
 // Len returns length of a role list
-func (s SortedRoles) Len() int {
+func (s SortedServiceRoles) Len() int {
 	return len(s)
 }
 
 // Less compares roles by name
-func (s SortedRoles) Less(i, j int) bool {
+func (s SortedServiceRoles) Less(i, j int) bool {
 	return s[i].GetName() < s[j].GetName()
 }
 
 // Swap swaps two roles in a list
-func (s SortedRoles) Swap(i, j int) {
+func (s SortedServiceRoles) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }

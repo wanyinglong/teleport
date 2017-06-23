@@ -69,7 +69,7 @@ func (s *TrustedClusterSuite) TestUnmarshal(c *check.C) {
 		},
 		Spec: TrustedClusterSpecV2{
 			Enabled:              true,
-			Roles:                []string{"bar", "baz"},
+			ServiceRoles:         []string{"bar", "baz"},
 			Token:                "qux",
 			ProxyAddress:         "quux",
 			ReverseTunnelAddress: "quuz",

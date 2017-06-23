@@ -408,13 +408,13 @@ func (c *CommandLabels) SetEnv(v string) error {
 	return nil
 }
 
-// GetServerSchema returns role schema with optionally injected
+// GetServerSchema returns server schema with optionally injected
 // schema for extensions
 func GetServerSchema() string {
 	return fmt.Sprintf(V2SchemaTemplate, MetadataSchema, ServerSpecV2Schema)
 }
 
-// UnmarshalServerResource unmarshals role from JSON or YAML,
+// UnmarshalServerResource unmarshals server from JSON or YAML,
 // sets defaults and checks the schema
 func UnmarshalServerResource(data []byte, kind string) (Server, error) {
 	if len(data) == 0 {
@@ -459,7 +459,7 @@ func GetServerMarshaler() ServerMarshaler {
 	return serverMarshaler
 }
 
-// ServerMarshaler implements marshal/unmarshal of Role implementations
+// ServerMarshaler implements marshal/unmarshal of Server implementations
 // mostly adds support for extended versions
 type ServerMarshaler interface {
 	// UnmarshalServer from binary representation

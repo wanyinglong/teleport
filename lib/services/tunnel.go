@@ -49,7 +49,7 @@ type ReverseTunnelV2 struct {
 	Kind string `json:"kind"`
 	// Version is a resource version
 	Version string `json:"version"`
-	// Metadata is Role metadata
+	// Metadata is reverse tunnel metadata
 	Metadata Metadata `json:"metadata"`
 	// Spec contains user specification
 	Spec ReverseTunnelSpecV2 `json:"spec"`
@@ -186,7 +186,7 @@ func (r *ReverseTunnelV1) V2() *ReverseTunnelV2 {
 	}
 }
 
-// GetReverseTunnelSchema returns role schema with optionally injected
+// GetReverseTunnelSchema returns reverse tunnel schema with optionally injected
 // schema for extensions
 func GetReverseTunnelSchema() string {
 	return fmt.Sprintf(V2SchemaTemplate, MetadataSchema, ReverseTunnelSpecV2Schema)
@@ -251,7 +251,7 @@ func (*TeleportTunnelMarshaler) UnmarshalReverseTunnel(bytes []byte) (ReverseTun
 	return UnmarshalReverseTunnel(bytes)
 }
 
-// MarshalRole marshalls role into JSON
+// MarshalReverseTunnel marshalls a reverse tunnel into JSON.
 func (*TeleportTunnelMarshaler) MarshalReverseTunnel(rt ReverseTunnel, opts ...MarshalOption) ([]byte, error) {
 	cfg, err := collectOptions(opts)
 	if err != nil {

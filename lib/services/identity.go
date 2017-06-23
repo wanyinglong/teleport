@@ -415,7 +415,7 @@ func (u Users) Swap(i, j int) {
 // SortedLoginAttempts sorts login attempts by time
 type SortedLoginAttempts []LoginAttempt
 
-// Len returns length of a role list
+// Len returns length of login attempts
 func (s SortedLoginAttempts) Len() int {
 	return len(s)
 }

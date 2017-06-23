@@ -56,14 +56,14 @@ type OIDCConnector interface {
 	GetDisplay() string
 	// Scope is additional scopes set by provder
 	GetScope() []string
-	// ClaimsToRoles specifies dynamic mapping from claims to roles
-	GetClaimsToRoles() []ClaimMapping
+	// ClaimsToServiceRoles specifies dynamic mapping from claims to roles
+	GetClaimsToServiceRoles() []ClaimMapping
 	// GetClaims returns list of claims expected by mappings
 	GetClaims() []string
 	// MapClaims maps claims to roles
 	MapClaims(claims jose.Claims) []string
-	// RoleFromTemplate creates a role from a template and claims.
-	RoleFromTemplate(claims jose.Claims) (Role, error)
+	// ServiceRoleFromTemplate creates a role from a template and claims.
+	ServiceRoleFromTemplate(claims jose.Claims) (ServiceRole, error)
 	// Check checks OIDC connector for errors
 	Check() error
 	// SetClientSecret sets client secret to some value
@@ -80,8 +80,8 @@ type OIDCConnector interface {
 	SetProvider(string)
 	// SetScope sets additional scopes set by provider
 	SetScope([]string)
-	// SetClaimsToRoles sets dynamic mapping from claims to roles
-	SetClaimsToRoles([]ClaimMapping)
+	// SetClaimsToServiceRoles sets dynamic mapping from claims to roles
+	SetClaimsToServiceRoles([]ClaimMapping)
 	// SetDisplay sets friendly name for this provider.
 	SetDisplay(string)
 }
@@ -209,14 +209,14 @@ func (o *OIDCConnectorV2) V2() *OIDCConnectorV2 {
 // V1 converts OIDCConnectorV2 to OIDCConnectorV1 format
 func (o *OIDCConnectorV2) V1() *OIDCConnectorV1 {
 	return &OIDCConnectorV1{
-		ID:            o.Metadata.Name,
-		IssuerURL:     o.Spec.IssuerURL,
-		ClientID:      o.Spec.ClientID,
-		ClientSecret:  o.Spec.ClientSecret,
-		RedirectURL:   o.Spec.RedirectURL,
-		Display:       o.Spec.Display,
-		Scope:         o.Spec.Scope,
-		ClaimsToRoles: o.Spec.ClaimsToRoles,
+		ID:                   o.Metadata.Name,
+		IssuerURL:            o.Spec.IssuerURL,
+		ClientID:             o.Spec.ClientID,
+		ClientSecret:         o.Spec.ClientSecret,
+		RedirectURL:          o.Spec.RedirectURL,
+		Display:              o.Spec.Display,
+		Scope:                o.Spec.Scope,
+		ClaimsToServiceRoles: o.Spec.ClaimsToServiceRoles,
 	}
 }
 
@@ -280,9 +280,9 @@ func (o *OIDCConnectorV2) SetScope(scope []string) {
 	o.Spec.Scope = scope
 }
 
-// SetClaimsToRoles sets dynamic mapping from claims to roles
-func (o *OIDCConnectorV2) SetClaimsToRoles(claims []ClaimMapping) {
-	o.Spec.ClaimsToRoles = claims
+// SetClaimsToServiceRoles sets dynamic mapping from claims to roles
+func (o *OIDCConnectorV2) SetClaimsToServiceRoles(claims []ClaimMapping) {
+	o.Spec.ClaimsToServiceRoles = claims
 }
 
 // SetClientID sets id for authentication client (in our case it's our Auth server)
@@ -341,15 +341,15 @@ func (o *OIDCConnectorV2) GetScope() []string {
 	return o.Spec.Scope
 }
 
-// ClaimsToRoles specifies dynamic mapping from claims to roles
-func (o *OIDCConnectorV2) GetClaimsToRoles() []ClaimMapping {
-	return o.Spec.ClaimsToRoles
+// ClaimsToServiceRoles specifies dynamic mapping from claims to roles
+func (o *OIDCConnectorV2) GetClaimsToServiceRoles() []ClaimMapping {
+	return o.Spec.ClaimsToServiceRoles
 }
 
 // GetClaims returns list of claims expected by mappings
 func (o *OIDCConnectorV2) GetClaims() []string {
 	var out []string
-	for _, mapping := range o.Spec.ClaimsToRoles {
+	for _, mapping := range o.Spec.ClaimsToServiceRoles {
 		out = append(out, mapping.Claim)
 	}
 	return utils.Deduplicate(out)
@@ -358,20 +358,20 @@ func (o *OIDCConnectorV2) GetClaims() []string {
 // MapClaims maps claims to roles
 func (o *OIDCConnectorV2) MapClaims(claims jose.Claims) []string {
 	var roles []string
-	for _, mapping := range o.Spec.ClaimsToRoles {
+	for _, mapping := range o.Spec.ClaimsToServiceRoles {
 		for claimName := range claims {
 			if claimName != mapping.Claim {
 				continue
 			}
 			claimValue, ok, _ := claims.StringClaim(claimName)
 			if ok && claimValue == mapping.Value {
-				roles = append(roles, mapping.Roles...)
+				roles = append(roles, mapping.ServiceRoles...)
 			}
 			claimValues, ok, _ := claims.StringsClaim(claimName)
 			if ok {
 				for _, claimValue := range claimValues {
 					if claimValue == mapping.Value {
-						roles = append(roles, mapping.Roles...)
+						roles = append(roles, mapping.ServiceRoles...)
 					}
 				}
 			}
@@ -414,9 +414,9 @@ func executeSliceTemplate(raw []string, claims jose.Claims) ([]string, error) {
 	return sl, nil
 }
 
-// RoleFromTemplate creates a role from a template and claims.
-func (o *OIDCConnectorV2) RoleFromTemplate(claims jose.Claims) (Role, error) {
-	for _, mapping := range o.Spec.ClaimsToRoles {
+// ServiceRoleFromTemplate creates a role from a template and claims.
+func (o *OIDCConnectorV2) ServiceRoleFromTemplate(claims jose.Claims) (ServiceRole, error) {
+	for _, mapping := range o.Spec.ClaimsToServiceRoles {
 		for claimName := range claims {
 			// claim name doesn't match
 			if claimName != mapping.Claim {
@@ -430,7 +430,7 @@ func (o *OIDCConnectorV2) RoleFromTemplate(claims jose.Claims) (Role, error) {
 			}
 
 			// claim name and value match, if a role template exists, execute template
-			roleTemplate := mapping.RoleTemplate
+			roleTemplate := mapping.ServiceRoleTemplate
 			if roleTemplate != nil {
 				// at the moment, only allow templating for role name and logins
 				executedName, err := executeStringTemplate(roleTemplate.GetName(), claims)
@@ -478,19 +478,19 @@ func (o *OIDCConnectorV2) Check() error {
 	}
 
 	// make sure claim mappings have either roles or a role template
-	for _, v := range o.Spec.ClaimsToRoles {
-		hasRoles := false
-		if len(v.Roles) > 0 {
-			hasRoles = true
+	for _, v := range o.Spec.ClaimsToServiceRoles {
+		hasServiceRoles := false
+		if len(v.ServiceRoles) > 0 {
+			hasServiceRoles = true
 		}
-		hasRoleTemplate := false
-		if v.RoleTemplate != nil {
-			hasRoleTemplate = true
+		hasServiceRoleTemplate := false
+		if v.ServiceRoleTemplate != nil {
+			hasServiceRoleTemplate = true
 		}
 
 		// we either need to have roles or role templates not both or neither
-		// ! ( hasRoles XOR hasRoleTemplate )
-		if hasRoles == hasRoleTemplate {
+		// ! ( hasServiceRoles XOR hasServiceRoleTemplate )
+		if hasServiceRoles == hasServiceRoleTemplate {
 			return trace.BadParameter("need roles or role template (not both or none)")
 		}
 	}
@@ -534,8 +534,8 @@ type OIDCConnectorSpecV2 struct {
 	Display string `json:"display,omitempty"`
 	// Scope is additional scopes set by provder
 	Scope []string `json:"scope,omitempty"`
-	// ClaimsToRoles specifies dynamic mapping from claims to roles
-	ClaimsToRoles []ClaimMapping `json:"claims_to_roles,omitempty"`
+	// ClaimsToServiceRoles specifies dynamic mapping from claims to roles
+	ClaimsToServiceRoles []ClaimMapping `json:"claims_to_roles,omitempty"`
 }
 
 // OIDCConnectorSpecV2Schema is a JSON Schema for OIDC Connector
@@ -580,10 +580,10 @@ type ClaimMapping struct {
 	Claim string `json:"claim"`
 	// Value is claim value to match
 	Value string `json:"value"`
-	// Roles is a list of static teleport roles to match.
-	Roles []string `json:"roles,omitempty"`
-	// RoleTemplate a template role that will be filled out with claims.
-	RoleTemplate *RoleV2 `json:"role_template,omitempty"`
+	// ServiceRoles is a list of static teleport roles to match.
+	ServiceRoles []string `json:"roles,omitempty"`
+	// ServiceRoleTemplate a template role that will be filled out with claims.
+	ServiceRoleTemplate *ServiceRoleV2 `json:"role_template,omitempty"`
 }
 
 // ClaimMappingSchema is JSON schema for claim mapping
@@ -602,7 +602,7 @@ var ClaimMappingSchema = fmt.Sprintf(`{
     },
     "role_template": %v
   }
-}`, GetRoleSchema(""))
+}`, GetServiceRoleSchema(""))
 
 // OIDCConnectorV1 specifies configuration for Open ID Connect compatible external
 // identity provider, e.g. google in some organisation
@@ -624,8 +624,8 @@ type OIDCConnectorV1 struct {
 	Display string `json:"display"`
 	// Scope is additional scopes set by provder
 	Scope []string `json:"scope"`
-	// ClaimsToRoles specifies dynamic mapping from claims to roles
-	ClaimsToRoles []ClaimMapping `json:"claims_to_roles"`
+	// ClaimsToServiceRoles specifies dynamic mapping from claims to roles
+	ClaimsToServiceRoles []ClaimMapping `json:"claims_to_roles"`
 }
 
 // V1 returns V1 version of the resource
@@ -642,13 +642,13 @@ func (o *OIDCConnectorV1) V2() *OIDCConnectorV2 {
 			Name: o.ID,
 		},
 		Spec: OIDCConnectorSpecV2{
-			IssuerURL:     o.IssuerURL,
-			ClientID:      o.ClientID,
-			ClientSecret:  o.ClientSecret,
-			RedirectURL:   o.RedirectURL,
-			Display:       o.Display,
-			Scope:         o.Scope,
-			ClaimsToRoles: o.ClaimsToRoles,
+			IssuerURL:            o.IssuerURL,
+			ClientID:             o.ClientID,
+			ClientSecret:         o.ClientSecret,
+			RedirectURL:          o.RedirectURL,
+			Display:              o.Display,
+			Scope:                o.Scope,
+			ClaimsToServiceRoles: o.ClaimsToServiceRoles,
 		},
 	}
 }

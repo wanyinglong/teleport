@@ -39,16 +39,16 @@ type TrustedCluster interface {
 	// SetEnabled enables (handshake and add ca+reverse tunnel) or disables TrustedCluster.
 	SetEnabled(bool)
 	// CombinedMapping is used to specify combined mapping from legacy property Roles
-	// and new property RoleMap
-	CombinedMapping() RoleMap
-	// GetRoleMap returns role map property
-	GetRoleMap() RoleMap
-	// SetRoleMap sets role map
-	SetRoleMap(m RoleMap)
-	// GetRoles returns the roles for the certificate authority.
-	GetRoles() []string
-	// SetRoles sets the roles for the certificate authority.
-	SetRoles([]string)
+	// and new property ServiceRoleMap
+	CombinedMapping() ServiceRoleMap
+	// GetServiceRoleMap returns role map property
+	GetServiceRoleMap() ServiceRoleMap
+	// SetServiceRoleMap sets role map
+	SetServiceRoleMap(m ServiceRoleMap)
+	// GetServiceRoles returns the roles for the certificate authority.
+	GetServiceRoles() []string
+	// SetServiceRoles sets the roles for the certificate authority.
+	SetServiceRoles([]string)
 	// GetToken returns the authorization and authentication token.
 	GetToken() string
 	// SetToken sets the authorization and authentication.
@@ -100,8 +100,8 @@ type TrustedClusterSpecV2 struct {
 	// certificate authority (CA).
 	Enabled bool `json:"enabled"`
 
-	// Roles is a list of roles that users will be assuming when connecting to this cluster.
-	Roles []string `json:"roles,omitempty"`
+	// ServiceRoles is a list of roles that users will be assuming when connecting to this cluster.
+	ServiceRoles []string `json:"roles,omitempty"`
 
 	// Token is the authorization token provided by another cluster needed by
 	// this cluster to join.
@@ -115,15 +115,15 @@ type TrustedClusterSpecV2 struct {
 	// not set, it is derived from <metadata.name>:<default reverse tunnel port>.
 	ReverseTunnelAddress string `json:"tunnel_addr"`
 
-	// RoleMap specifies role mappings to remote roles
-	RoleMap RoleMap `json:"role_map,omitempty"`
+	// ServiceRoleMap specifies role mappings to remote roles
+	ServiceRoleMap ServiceRoleMap `json:"role_map,omitempty"`
 }
 
-// RoleMap is a list of mappings
-type RoleMap []RoleMapping
+// ServiceRoleMap is a list of mappings
+type ServiceRoleMap []ServiceRoleMapping
 
 // String prints user friendly representation of role mapping
-func (r RoleMap) String() string {
+func (r ServiceRoleMap) String() string {
 	directMatch, wildcardMatch, err := r.parse()
 	if err != nil {
 		return fmt.Sprintf("<failed to parse: %v", err)
@@ -137,7 +137,7 @@ func (r RoleMap) String() string {
 	return "<empty>"
 }
 
-func (r RoleMap) parse() (map[string][]string, []string, error) {
+func (r ServiceRoleMap) parse() (map[string][]string, []string, error) {
 	var wildcardMatch []string
 	directMatch := make(map[string][]string)
 	for i := range r {
@@ -173,7 +173,7 @@ func (r RoleMap) parse() (map[string][]string, []string, error) {
 }
 
 // Map maps local roles to remote roles
-func (r RoleMap) Map(remoteRoles []string) ([]string, error) {
+func (r ServiceRoleMap) Map(remoteRoles []string) ([]string, error) {
 	directMatch, wildcardMatch, err := r.parse()
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -196,15 +196,15 @@ func (r RoleMap) Map(remoteRoles []string) ([]string, error) {
 	return outRoles, nil
 }
 
-// Check checks RoleMap for errors
-func (r RoleMap) Check() error {
+// Check checks ServiceRoleMap for errors
+func (r ServiceRoleMap) Check() error {
 	_, _, err := r.parse()
 	return trace.Wrap(err)
 }
 
-// RoleMappping provides mapping of remote roles to local roles
+// ServiceRoleMappping provides mapping of remote roles to local roles
 // for trusted clusters
-type RoleMapping struct {
+type ServiceRoleMapping struct {
 	// Remote specifies remote role name to map from
 	Remote string `json:"remote"`
 	// Local specifies local roles to map to
@@ -218,36 +218,36 @@ func (c *TrustedClusterV2) CheckAndSetDefaults() error {
 		return trace.Wrap(err)
 	}
 	// This is to force users to migrate
-	if len(c.Spec.Roles) != 0 && len(c.Spec.RoleMap) != 0 {
+	if len(c.Spec.ServiceRoles) != 0 && len(c.Spec.ServiceRoleMap) != 0 {
 		return trace.BadParameter("should set either 'roles' or 'role_map', not both")
 	}
 	// we are not mentioning Roles parameter because we are deprecating it
-	if len(c.Spec.Roles) == 0 && len(c.Spec.RoleMap) == 0 {
+	if len(c.Spec.ServiceRoles) == 0 && len(c.Spec.ServiceRoleMap) == 0 {
 		return trace.BadParameter("missing 'role_map' parameter")
 	}
-	if err := c.Spec.RoleMap.Check(); err != nil {
+	if err := c.Spec.ServiceRoleMap.Check(); err != nil {
 		return trace.Wrap(err)
 	}
 	return nil
 }
 
 // CombinedMapping is used to specify combined mapping from legacy property Roles
-// and new property RoleMap
-func (c *TrustedClusterV2) CombinedMapping() RoleMap {
-	if len(c.Spec.Roles) != 0 {
-		return []RoleMapping{{Remote: Wildcard, Local: c.Spec.Roles}}
+// and new property ServiceRoleMap
+func (c *TrustedClusterV2) CombinedMapping() ServiceRoleMap {
+	if len(c.Spec.ServiceRoles) != 0 {
+		return []ServiceRoleMapping{{Remote: Wildcard, Local: c.Spec.ServiceRoles}}
 	}
-	return c.Spec.RoleMap
+	return c.Spec.ServiceRoleMap
 }
 
-// GetRoleMap returns role map property
-func (c *TrustedClusterV2) GetRoleMap() RoleMap {
-	return c.Spec.RoleMap
+// GetServiceRoleMap returns role map property
+func (c *TrustedClusterV2) GetServiceRoleMap() ServiceRoleMap {
+	return c.Spec.ServiceRoleMap
 }
 
-// SetRoleMap sets role map
-func (c *TrustedClusterV2) SetRoleMap(m RoleMap) {
-	c.Spec.RoleMap = m
+// SetServiceRoleMap sets role map
+func (c *TrustedClusterV2) SetServiceRoleMap(m ServiceRoleMap) {
+	c.Spec.ServiceRoleMap = m
 }
 
 // GetMetadata returns object metadata
@@ -290,14 +290,14 @@ func (c *TrustedClusterV2) SetEnabled(e bool) {
 	c.Spec.Enabled = e
 }
 
-// GetRoles returns the roles for the certificate authority.
-func (c *TrustedClusterV2) GetRoles() []string {
-	return c.Spec.Roles
+// GetServiceRoles returns the roles for the certificate authority.
+func (c *TrustedClusterV2) GetServiceRoles() []string {
+	return c.Spec.ServiceRoles
 }
 
-// SetRoles sets the roles for the certificate authority.
-func (c *TrustedClusterV2) SetRoles(e []string) {
-	c.Spec.Roles = e
+// SetServiceRoles sets the roles for the certificate authority.
+func (c *TrustedClusterV2) SetServiceRoles(e []string) {
+	c.Spec.ServiceRoles = e
 }
 
 // GetToken returns the authorization and authentication token.
@@ -332,8 +332,8 @@ func (c *TrustedClusterV2) SetReverseTunnelAddress(e string) {
 
 // String represents a human readable version of trusted cluster settings.
 func (c *TrustedClusterV2) String() string {
-	return fmt.Sprintf("TrustedCluster(Enabled=%v,Roles=%v,Token=%v,ProxyAddress=%v,ReverseTunnelAddress=%v)",
-		c.Spec.Enabled, c.Spec.Roles, c.Spec.Token, c.Spec.ProxyAddress, c.Spec.ReverseTunnelAddress)
+	return fmt.Sprintf("TrustedCluster(Enabled=%v,ServiceRoles=%v,Token=%v,ProxyAddress=%v,ReverseTunnelAddress=%v)",
+		c.Spec.Enabled, c.Spec.ServiceRoles, c.Spec.Token, c.Spec.ProxyAddress, c.Spec.ReverseTunnelAddress)
 }
 
 // TrustedClusterSpecSchemaTemplate is a template for trusted cluster schema
@@ -355,8 +355,8 @@ const TrustedClusterSpecSchemaTemplate = `{
   }
 }`
 
-// RoleMapSchema is a schema for role mappings of trusted clusters
-const RoleMapSchema = `{
+// ServiceRoleMapSchema is a schema for role mappings of trusted clusters
+const ServiceRoleMapSchema = `{
   "type": "array",
   "items": {
     "type": "object",
@@ -378,9 +378,9 @@ const RoleMapSchema = `{
 func GetTrustedClusterSchema(extensionSchema string) string {
 	var trustedClusterSchema string
 	if trustedClusterSchema == "" {
-		trustedClusterSchema = fmt.Sprintf(TrustedClusterSpecSchemaTemplate, RoleMapSchema, "")
+		trustedClusterSchema = fmt.Sprintf(TrustedClusterSpecSchemaTemplate, ServiceRoleMapSchema, "")
 	} else {
-		trustedClusterSchema = fmt.Sprintf(TrustedClusterSpecSchemaTemplate, RoleMapSchema, ","+extensionSchema)
+		trustedClusterSchema = fmt.Sprintf(TrustedClusterSpecSchemaTemplate, ServiceRoleMapSchema, ","+extensionSchema)
 	}
 	return fmt.Sprintf(V2SchemaTemplate, MetadataSchema, trustedClusterSchema)
 }

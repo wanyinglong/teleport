@@ -20,8 +20,8 @@ type User interface {
 	GetOIDCIdentities() []ExternalIdentity
 	// GetSAMLIdentities returns a list of connected OIDCIdentities
 	GetSAMLIdentities() []ExternalIdentity
-	// GetRoles returns a list of roles assigned to user
-	GetRoles() []string
+	// GetServiceRoles returns a list of roles assigned to user
+	GetServiceRoles() []string
 	// String returns user
 	String() string
 	// Equals checks if user equals to another
@@ -30,10 +30,10 @@ type User interface {
 	GetStatus() LoginStatus
 	// SetLocked sets login status to locked
 	SetLocked(until time.Time, reason string)
-	// SetRoles sets user roles
-	SetRoles(roles []string)
-	// AddRole adds role to the users' role list
-	AddRole(name string)
+	// SetServiceRoles sets user roles
+	SetServiceRoles(roles []string)
+	// AddServiceRole adds role to the users' role list
+	AddServiceRole(name string)
 	// GetCreatedBy returns information about user
 	GetCreatedBy() CreatedBy
 	// SetCreatedBy sets created by information
@@ -222,8 +222,8 @@ type UserSpecV2 struct {
 	// that let user log in using externally verified identity
 	SAMLIdentities []ExternalIdentity `json:"saml_identities,omitempty"`
 
-	// Roles is a list of roles assigned to user
-	Roles []string `json:"roles,omitempty"`
+	// ServiceRoles is a list of roles assigned to user
+	ServiceRoles []string `json:"roles,omitempty"`
 
 	// Status is a login status of the user
 	Status LoginStatus `json:"status"`
@@ -325,9 +325,9 @@ func (u *UserV2) Expiry() time.Time {
 	return u.Spec.Expires
 }
 
-// SetRoles sets a list of roles for user
-func (u *UserV2) SetRoles(roles []string) {
-	u.Spec.Roles = utils.Deduplicate(roles)
+// SetServiceRoles sets a list of roles for user
+func (u *UserV2) SetServiceRoles(roles []string) {
+	u.Spec.ServiceRoles = utils.Deduplicate(roles)
 }
 
 // GetStatus returns login status of the user
@@ -345,23 +345,23 @@ func (u *UserV2) GetSAMLIdentities() []ExternalIdentity {
 	return u.Spec.SAMLIdentities
 }
 
-// GetRoles returns a list of roles assigned to user
-func (u *UserV2) GetRoles() []string {
-	return u.Spec.Roles
+// GetServiceRoles returns a list of roles assigned to user
+func (u *UserV2) GetServiceRoles() []string {
+	return u.Spec.ServiceRoles
 }
 
-// AddRole adds a role to user's role list
-func (u *UserV2) AddRole(name string) {
-	for _, r := range u.Spec.Roles {
+// AddServiceRole adds a role to user's role list
+func (u *UserV2) AddServiceRole(name string) {
+	for _, r := range u.Spec.ServiceRoles {
 		if r == name {
 			return
 		}
 	}
-	u.Spec.Roles = append(u.Spec.Roles, name)
+	u.Spec.ServiceRoles = append(u.Spec.ServiceRoles, name)
 }
 
 func (u *UserV2) String() string {
-	return fmt.Sprintf("User(name=%v, roles=%v, identities=%v)", u.Metadata.Name, u.Spec.Roles, u.Spec.OIDCIdentities)
+	return fmt.Sprintf("User(name=%v, roles=%v, identities=%v)", u.Metadata.Name, u.Spec.ServiceRoles, u.Spec.OIDCIdentities)
 }
 
 func (u *UserV2) SetLocked(until time.Time, reason string) {
@@ -411,8 +411,8 @@ type UserV1 struct {
 	// CreatedBy holds information about agent or person created this usre
 	CreatedBy CreatedBy `json:"created_by"`
 
-	// Roles is a list of roles
-	Roles []string `json:"roles"`
+	// ServiceRoles is a list of roles
+	ServiceRoles []string `json:"roles"`
 }
 
 // Check checks validity of all parameters
@@ -447,7 +447,7 @@ func (u *UserV1) V2() *UserV2 {
 			Status:         u.Status,
 			Expires:        u.Expires,
 			CreatedBy:      u.CreatedBy,
-			Roles:          u.Roles,
+			ServiceRoles:   u.ServiceRoles,
 		},
 		rawObject: *u,
 	}
@@ -482,7 +482,7 @@ type UserMarshaler interface {
 	GenerateUser(User) (User, error)
 }
 
-// GetRoleSchema returns role schema with optionally injected
+// GetServiceRoleSchema returns role schema with optionally injected
 // schema for extensions
 func GetUserSchema(extensionSchema string) string {
 	var userSchema string

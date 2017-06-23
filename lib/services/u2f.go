@@ -165,7 +165,7 @@ func GetUniversalSecondFactorMarshaler() UniversalSecondFactorMarshaler {
 
 type TeleportUniversalSecondFactorMarshaler struct{}
 
-// Unmarshal unmarshals role from JSON or YAML.
+// Unmarshal unmarshals U2F from JSON or YAML.
 func (t *TeleportUniversalSecondFactorMarshaler) Unmarshal(bytes []byte) (UniversalSecondFactor, error) {
 	var authPreference UniversalSecondFactorV2
 
@@ -181,7 +181,7 @@ func (t *TeleportUniversalSecondFactorMarshaler) Unmarshal(bytes []byte) (Univer
 	return &authPreference, nil
 }
 
-// Marshal marshals role to JSON or YAML.
+// Marshal marshals U2F to JSON or YAML.
 func (t *TeleportUniversalSecondFactorMarshaler) Marshal(c UniversalSecondFactor, opts ...MarshalOption) ([]byte, error) {
 	return json.Marshal(c)
 }

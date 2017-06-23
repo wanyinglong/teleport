@@ -116,7 +116,7 @@ func newUser(name string, roles []string) services.User {
 			Namespace: defaults.Namespace,
 		},
 		Spec: services.UserSpecV2{
-			Roles: roles,
+			ServiceRoles: roles,
 		},
 	}
 }
@@ -373,43 +373,43 @@ func (s *ServicesTestSuite) TokenCRUD(c *C) {
 	c.Assert(trace.IsNotFound(err), Equals, true, Commentf("%#v", err))
 }
 
-func (s *ServicesTestSuite) RolesCRUD(c *C) {
-	out, err := s.Access.GetRoles()
+func (s *ServicesTestSuite) ServiceRolesCRUD(c *C) {
+	out, err := s.Access.GetServiceRoles()
 	c.Assert(err, IsNil)
 	c.Assert(len(out), Equals, 0)
 
-	role := services.RoleV2{
-		Kind:    services.KindRole,
+	role := services.ServiceRoleV2{
+		Kind:    services.KindServiceRole,
 		Version: services.V2,
 		Metadata: services.Metadata{
 			Name:      "role1",
 			Namespace: defaults.Namespace,
 		},
-		Spec: services.RoleSpecV2{
+		Spec: services.ServiceRoleSpecV2{
 			Logins:        []string{"root", "bob"},
 			NodeLabels:    map[string]string{services.Wildcard: services.Wildcard},
 			MaxSessionTTL: services.Duration{Duration: time.Hour},
 			Namespaces:    []string{"default", "system"},
-			Resources:     map[string][]string{services.KindRole: []string{services.ActionRead}},
+			Resources:     map[string][]string{services.KindServiceRole: []string{services.ActionRead}},
 		},
 	}
-	err = s.Access.UpsertRole(&role, backend.Forever)
+	err = s.Access.UpsertServiceRole(&role, backend.Forever)
 	c.Assert(err, IsNil)
-	rout, err := s.Access.GetRole(role.Metadata.Name)
+	rout, err := s.Access.GetServiceRole(role.Metadata.Name)
 	c.Assert(err, IsNil)
 	c.Assert(rout, DeepEquals, &role)
 
 	role.Spec.Logins = []string{"bob"}
-	err = s.Access.UpsertRole(&role, backend.Forever)
+	err = s.Access.UpsertServiceRole(&role, backend.Forever)
 	c.Assert(err, IsNil)
-	rout, err = s.Access.GetRole(role.Metadata.Name)
+	rout, err = s.Access.GetServiceRole(role.Metadata.Name)
 	c.Assert(err, IsNil)
 	c.Assert(rout, DeepEquals, &role)
 
-	err = s.Access.DeleteRole(role.Metadata.Name)
+	err = s.Access.DeleteServiceRole(role.Metadata.Name)
 	c.Assert(err, IsNil)
 
-	_, err = s.Access.GetRole(role.Metadata.Name)
+	_, err = s.Access.GetServiceRole(role.Metadata.Name)
 	c.Assert(trace.IsNotFound(err), Equals, true, Commentf("%T", err))
 }
 
@@ -502,8 +502,8 @@ func (s *ServicesTestSuite) SAMLCRUD(c *C) {
 			AssertionConsumerService: "https://localhost/acs",
 			Audience:                 "https://localhost/aud",
 			ServiceProviderIssuer:    "https://localhost/iss",
-			AttributesToRoles: []services.AttributeMapping{
-				{Name: "groups", Value: "admin", Roles: []string{"admin"}},
+			AttributesToServiceRoles: []services.AttributeMapping{
+				{Name: "groups", Value: "admin", ServiceRoles: []string{"admin"}},
 			},
 			Cert: fixtures.SigningCertPEM,
 			SigningKeyPair: &services.SigningKeyPair{

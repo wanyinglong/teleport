@@ -70,7 +70,7 @@ func (s *PresenceSuite) TestTrustedClusterCRUD(c *check.C) {
 
 	tc, err := services.NewTrustedCluster("foo", services.TrustedClusterSpecV2{
 		Enabled:              true,
-		Roles:                []string{"bar", "baz"},
+		ServiceRoles:         []string{"bar", "baz"},
 		Token:                "qux",
 		ProxyAddress:         "quux",
 		ReverseTunnelAddress: "quuz",
@@ -80,7 +80,7 @@ func (s *PresenceSuite) TestTrustedClusterCRUD(c *check.C) {
 	// we just insert this one for get all
 	stc, err := services.NewTrustedCluster("bar", services.TrustedClusterSpecV2{
 		Enabled:              false,
-		Roles:                []string{"baz", "aux"},
+		ServiceRoles:         []string{"baz", "aux"},
 		Token:                "quux",
 		ProxyAddress:         "quuz",
 		ReverseTunnelAddress: "corge",
@@ -98,7 +98,7 @@ func (s *PresenceSuite) TestTrustedClusterCRUD(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(gotTC.GetName(), check.Equals, "foo")
 	c.Assert(gotTC.GetEnabled(), check.Equals, true)
-	c.Assert(gotTC.GetRoles(), check.DeepEquals, []string{"bar", "baz"})
+	c.Assert(gotTC.GetServiceRoles(), check.DeepEquals, []string{"bar", "baz"})
 	c.Assert(gotTC.GetToken(), check.Equals, "qux")
 	c.Assert(gotTC.GetProxyAddress(), check.Equals, "quux")
 	c.Assert(gotTC.GetReverseTunnelAddress(), check.Equals, "quuz")

@@ -25,42 +25,42 @@ import (
 	"gopkg.in/check.v1"
 )
 
-type RoleMapSuite struct{}
+type ServiceRoleMapSuite struct{}
 
-var _ = check.Suite(&RoleMapSuite{})
+var _ = check.Suite(&ServiceRoleMapSuite{})
 var _ = fmt.Printf
 
-func (s *RoleMapSuite) SetUpSuite(c *check.C) {
+func (s *ServiceRoleMapSuite) SetUpSuite(c *check.C) {
 	utils.InitLoggerForTests()
 }
 
-func (s *RoleMapSuite) TestRoleParsing(c *check.C) {
+func (s *ServiceRoleMapSuite) TestServiceRoleParsing(c *check.C) {
 	testCases := []struct {
-		roleMap RoleMap
+		roleMap ServiceRoleMap
 		err     error
 	}{
 		{
 			roleMap: nil,
 		},
 		{
-			roleMap: RoleMap{
+			roleMap: ServiceRoleMap{
 				{Remote: Wildcard, Local: []string{"local-devs", "local-admins"}},
 			},
 		},
 		{
-			roleMap: RoleMap{
+			roleMap: ServiceRoleMap{
 				{Remote: "remote-devs", Local: []string{"local-devs"}},
 			},
 		},
 		{
-			roleMap: RoleMap{
+			roleMap: ServiceRoleMap{
 				{Remote: "remote-devs", Local: []string{"local-devs"}},
 				{Remote: "remote-devs", Local: []string{"local-devs"}},
 			},
 			err: trace.BadParameter(""),
 		},
 		{
-			roleMap: RoleMap{
+			roleMap: ServiceRoleMap{
 				{Remote: Wildcard, Local: []string{"local-devs"}},
 				{Remote: Wildcard, Local: []string{"local-devs"}},
 			},
@@ -80,11 +80,11 @@ func (s *RoleMapSuite) TestRoleParsing(c *check.C) {
 	}
 }
 
-func (s *RoleMapSuite) TestRoleMap(c *check.C) {
+func (s *ServiceRoleMapSuite) TestServiceRoleMap(c *check.C) {
 	testCases := []struct {
 		remote  []string
 		local   []string
-		roleMap RoleMap
+		roleMap ServiceRoleMap
 		name    string
 		err     error
 	}{
@@ -98,7 +98,7 @@ func (s *RoleMapSuite) TestRoleMap(c *check.C) {
 			name:   "wildcard matches empty as well",
 			remote: nil,
 			local:  []string{"local-devs", "local-admins"},
-			roleMap: RoleMap{
+			roleMap: ServiceRoleMap{
 				{Remote: Wildcard, Local: []string{"local-devs", "local-admins"}},
 			},
 		},
@@ -106,7 +106,7 @@ func (s *RoleMapSuite) TestRoleMap(c *check.C) {
 			name:   "direct match",
 			remote: []string{"remote-devs"},
 			local:  []string{"local-devs"},
-			roleMap: RoleMap{
+			roleMap: ServiceRoleMap{
 				{Remote: "remote-devs", Local: []string{"local-devs"}},
 			},
 		},
@@ -114,7 +114,7 @@ func (s *RoleMapSuite) TestRoleMap(c *check.C) {
 			name:   "direct match for multiple roles",
 			remote: []string{"remote-devs", "remote-logs"},
 			local:  []string{"local-devs", "local-logs"},
-			roleMap: RoleMap{
+			roleMap: ServiceRoleMap{
 				{Remote: "remote-devs", Local: []string{"local-devs"}},
 				{Remote: "remote-logs", Local: []string{"local-logs"}},
 			},
@@ -123,7 +123,7 @@ func (s *RoleMapSuite) TestRoleMap(c *check.C) {
 			name:   "direct match and wildcard",
 			remote: []string{"remote-devs"},
 			local:  []string{"local-devs", "local-logs"},
-			roleMap: RoleMap{
+			roleMap: ServiceRoleMap{
 				{Remote: "remote-devs", Local: []string{"local-devs"}},
 				{Remote: Wildcard, Local: []string{"local-logs"}},
 			},

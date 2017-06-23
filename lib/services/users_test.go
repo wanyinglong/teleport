@@ -32,15 +32,15 @@ func (s *UserSuite) SetUpSuite(c *C) {
 	utils.InitLoggerForTests()
 }
 
-func (s *RoleSuite) TestOIDCMapping(c *C) {
+func (s *UserSuite) TestOIDCMapping(c *C) {
 	conn := OIDCConnectorV2{}
 	c.Assert(conn.MapClaims(jose.Claims{"a": "b"}), DeepEquals, []string(nil))
 
 	conn = OIDCConnectorV2{
 		Spec: OIDCConnectorSpecV2{
-			ClaimsToRoles: []ClaimMapping{
-				{Claim: "role", Value: "admin", Roles: []string{"admin", "bob"}},
-				{Claim: "role", Value: "user", Roles: []string{"user"}},
+			ClaimsToServiceRoles: []ClaimMapping{
+				{Claim: "role", Value: "admin", ServiceRoles: []string{"admin", "bob"}},
+				{Claim: "role", Value: "user", ServiceRoles: []string{"user"}},
 			},
 		},
 	}

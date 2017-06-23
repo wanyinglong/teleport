@@ -31,7 +31,7 @@ type Namespace struct {
 	Kind string `json:"kind"`
 	// Version is a resource version
 	Version string `json:"version"`
-	// Metadata is Role metadata
+	// Metadata is Namespace metadata
 	Metadata Metadata `json:"metadata"`
 	// Spec contains namespace specification
 	Spec NamespaceSpec `json:"spec"`
@@ -78,7 +78,7 @@ func GetNamespaceSchema() string {
 	return fmt.Sprintf(NamespaceSchemaTemplate, MetadataSchema, NamespaceSpecSchema)
 }
 
-// UnmarshalNamespace unmarshals role from JSON or YAML,
+// UnmarshalNamespace unmarshals namespace from JSON or YAML,
 // sets defaults and checks the schema
 func UnmarshalNamespace(data []byte) (*Namespace, error) {
 	if len(data) == 0 {
@@ -95,17 +95,17 @@ func UnmarshalNamespace(data []byte) (*Namespace, error) {
 // SortedNamespaces sorts namespaces
 type SortedNamespaces []Namespace
 
-// Len returns length of a role list
+// Len returns length of sorted namespace list
 func (s SortedNamespaces) Len() int {
 	return len(s)
 }
 
-// Less compares roles by name
+// Less compares namespaces by name
 func (s SortedNamespaces) Less(i, j int) bool {
 	return s[i].Metadata.Name < s[j].Metadata.Name
 }
 
-// Swap swaps two roles in a list
+// Swap swaps two namespace in a list
 func (s SortedNamespaces) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }

@@ -124,12 +124,12 @@ type CertAuthority interface {
 	// GetSigning keys returns signing keys
 	GetSigningKeys() [][]byte
 	// CombinedMapping is used to specify combined mapping from legacy property Roles
-	// and new property RoleMap
-	CombinedMapping() RoleMap
-	// GetRoleMap returns role map property
-	GetRoleMap() RoleMap
-	// SetRoleMap sets role map
-	SetRoleMap(m RoleMap)
+	// and new property ServiceRoleMap
+	CombinedMapping() ServiceRoleMap
+	// GetServiceRoleMap returns role map property
+	GetServiceRoleMap() ServiceRoleMap
+	// SetServiceRoleMap sets role map
+	SetServiceRoleMap(m ServiceRoleMap)
 	// GetRoles returns a list of roles assumed by users signed by this CA
 	GetRoles() []string
 	// SetRoles sets assigned roles for this certificate authority
@@ -143,8 +143,8 @@ type CertAuthority interface {
 	Check() error
 	// SetSigningKeys sets signing keys
 	SetSigningKeys([][]byte) error
-	// AddRole adds a role to ca role list
-	AddRole(name string)
+	// AddServiceRole adds a role to ca role list
+	AddServiceRole(name string)
 	// Checkers returns public keys that can be used to check cert authorities
 	Checkers() ([]ssh.PublicKey, error)
 	// Signers returns a list of signers that could be used to sign keys
@@ -165,7 +165,7 @@ func NewCertAuthority(caType CertAuthType, clusterName string, signingKeys, chec
 			Namespace: defaults.Namespace,
 		},
 		Spec: CertAuthoritySpecV2{
-			Roles:        roles,
+			ServiceRoles: roles,
 			Type:         caType,
 			ClusterName:  clusterName,
 			CheckingKeys: checkingKeys,
@@ -240,14 +240,14 @@ func (c *CertAuthorityV2) V1() *CertAuthorityV1 {
 	}
 }
 
-// AddRole adds a role to ca role list
-func (ca *CertAuthorityV2) AddRole(name string) {
-	for _, r := range ca.Spec.Roles {
+// AddServiceRole adds a role to ca role list
+func (ca *CertAuthorityV2) AddServiceRole(name string) {
+	for _, r := range ca.Spec.ServiceRoles {
 		if r == name {
 			return
 		}
 	}
-	ca.Spec.Roles = append(ca.Spec.Roles, name)
+	ca.Spec.ServiceRoles = append(ca.Spec.ServiceRoles, name)
 }
 
 // GetSigning keys returns signing keys
@@ -295,31 +295,31 @@ func (ca *CertAuthorityV2) GetCheckingKeys() [][]byte {
 
 // GetRoles returns a list of roles assumed by users signed by this CA
 func (ca *CertAuthorityV2) GetRoles() []string {
-	return ca.Spec.Roles
+	return ca.Spec.ServiceRoles
 }
 
 // SetRoles sets assigned roles for this certificate authority
 func (ca *CertAuthorityV2) SetRoles(roles []string) {
-	ca.Spec.Roles = roles
+	ca.Spec.ServiceRoles = roles
 }
 
 // CombinedMapping is used to specify combined mapping from legacy property Roles
-// and new property RoleMap
-func (ca *CertAuthorityV2) CombinedMapping() RoleMap {
-	if len(ca.Spec.Roles) != 0 {
-		return []RoleMapping{{Remote: Wildcard, Local: ca.Spec.Roles}}
+// and new property ServiceRoleMap
+func (ca *CertAuthorityV2) CombinedMapping() ServiceRoleMap {
+	if len(ca.Spec.ServiceRoles) != 0 {
+		return []ServiceRoleMapping{{Remote: Wildcard, Local: ca.Spec.ServiceRoles}}
 	}
-	return ca.Spec.RoleMap
+	return ca.Spec.ServiceRoleMap
 }
 
-// GetRoleMap returns role map property
-func (ca *CertAuthorityV2) GetRoleMap() RoleMap {
-	return ca.Spec.RoleMap
+// GetServiceRoleMap returns role map property
+func (ca *CertAuthorityV2) GetServiceRoleMap() ServiceRoleMap {
+	return ca.Spec.ServiceRoleMap
 }
 
-// SetRoleMap sets role map
-func (c *CertAuthorityV2) SetRoleMap(m RoleMap) {
-	c.Spec.RoleMap = m
+// SetServiceRoleMap sets role map
+func (c *CertAuthorityV2) SetServiceRoleMap(m ServiceRoleMap) {
+	c.Spec.ServiceRoleMap = m
 }
 
 // GetRawObject returns raw object data, used for migrations
@@ -382,10 +382,10 @@ func (ca *CertAuthorityV2) Check() error {
 		return trace.Wrap(err)
 	}
 	// This is to force users to migrate
-	if len(ca.Spec.Roles) != 0 && len(ca.Spec.RoleMap) != 0 {
+	if len(ca.Spec.ServiceRoles) != 0 && len(ca.Spec.ServiceRoleMap) != 0 {
 		return trace.BadParameter("should set either 'roles' or 'role_map', not both")
 	}
-	if err := ca.Spec.RoleMap.Check(); err != nil {
+	if err := ca.Spec.ServiceRoleMap.Check(); err != nil {
 		return trace.Wrap(err)
 	}
 	return nil
@@ -405,10 +405,10 @@ type CertAuthoritySpecV2 struct {
 	CheckingKeys [][]byte `json:"checking_keys"`
 	// SigningKeys is a list of private keys used for signing
 	SigningKeys [][]byte `json:"signing_keys,omitempty"`
-	// Roles is a list of roles assumed by users signed by this CA
-	Roles []string `json:"roles,omitempty"`
-	// RoleMap specifies role mappings to remote roles
-	RoleMap RoleMap `json:"role_map,omitempty"`
+	// ServiceRoles is a list of roles assumed by users signed by this CA
+	ServiceRoles []string `json:"roles,omitempty"`
+	// ServiceRoleMap specifies role mappings to remote roles
+	ServiceRoleMap ServiceRoleMap `json:"role_map,omitempty"`
 }
 
 // CertAuthoritySpecV2Schema is JSON schema for cert authority V2
@@ -461,18 +461,18 @@ type CertAuthorityV1 struct {
 }
 
 // CombinedMapping is used to specify combined mapping from legacy property Roles
-// and new property RoleMap
-func (ca *CertAuthorityV1) CombinedMapping() RoleMap {
-	return []RoleMapping{}
+// and new property ServiceRoleMap
+func (ca *CertAuthorityV1) CombinedMapping() ServiceRoleMap {
+	return []ServiceRoleMapping{}
 }
 
-// GetRoleMap returns role map property
-func (ca *CertAuthorityV1) GetRoleMap() RoleMap {
+// GetServiceRoleMap returns role map property
+func (ca *CertAuthorityV1) GetServiceRoleMap() ServiceRoleMap {
 	return nil
 }
 
-// SetRoleMap sets role map
-func (c *CertAuthorityV1) SetRoleMap(m RoleMap) {
+// SetServiceRoleMap sets role map
+func (c *CertAuthorityV1) SetServiceRoleMap(m ServiceRoleMap) {
 }
 
 // V1 returns V1 version of the resource
@@ -530,7 +530,7 @@ type CertAuthorityMarshaler interface {
 
 // GetCertAuthoritySchema returns JSON Schema for cert authorities
 func GetCertAuthoritySchema() string {
-	return fmt.Sprintf(V2SchemaTemplate, MetadataSchema, fmt.Sprintf(CertAuthoritySpecV2Schema, RoleMapSchema))
+	return fmt.Sprintf(V2SchemaTemplate, MetadataSchema, fmt.Sprintf(CertAuthoritySpecV2Schema, ServiceRoleMapSchema))
 }
 
 type TeleportCertAuthorityMarshaler struct{}

@@ -28,41 +28,41 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-func TestRoleParsing(t *testing.T) { TestingT(t) }
+func TestServiceRoleParsing(t *testing.T) { TestingT(t) }
 
-type RoleSuite struct {
+type ServiceRoleSuite struct {
 }
 
-var _ = Suite(&RoleSuite{})
+var _ = Suite(&ServiceRoleSuite{})
 
-func (s *RoleSuite) SetUpSuite(c *C) {
+func (s *ServiceRoleSuite) SetUpSuite(c *C) {
 	utils.InitLoggerForTests()
 }
 
-func (s *RoleSuite) TestRoleExtension(c *C) {
+func (s *ServiceRoleSuite) TestServiceRoleExtension(c *C) {
 	type Spec struct {
-		RoleSpecV2
+		ServiceRoleSpecV2
 		A string `json:"a"`
 	}
-	type ExtendedRole struct {
+	type ExtendedServiceRole struct {
 		Spec Spec `json:"spec"`
 	}
 	in := `{"kind": "role", "metadata": {"name": "name1"}, "spec": {"a": "b"}}`
-	var role ExtendedRole
-	err := utils.UnmarshalWithSchema(GetRoleSchema(`"a": {"type": "string"}`), &role, []byte(in))
+	var role ExtendedServiceRole
+	err := utils.UnmarshalWithSchema(GetServiceRoleSchema(`"a": {"type": "string"}`), &role, []byte(in))
 	c.Assert(err, IsNil)
 	c.Assert(role.Spec.A, Equals, "b")
 
 	// this is a bad type
 	in = `{"kind": "role", "metadata": {"name": "name1"}, "spec": {"a": 12}}`
-	err = utils.UnmarshalWithSchema(GetRoleSchema(`"a": {"type": "string"}`), &role, []byte(in))
+	err = utils.UnmarshalWithSchema(GetServiceRoleSchema(`"a": {"type": "string"}`), &role, []byte(in))
 	c.Assert(err, NotNil)
 }
 
-func (s *RoleSuite) TestRoleParse(c *C) {
+func (s *ServiceRoleSuite) TestServiceRoleParse(c *C) {
 	testCases := []struct {
 		in    string
-		role  RoleV2
+		role  ServiceRoleV2
 		error error
 	}{
 		{
@@ -79,14 +79,14 @@ func (s *RoleSuite) TestRoleParse(c *C) {
 		},
 		{
 			in: `{"kind": "role", "metadata": {"name": "name1"}, "spec": {}}`,
-			role: RoleV2{
-				Kind:    KindRole,
+			role: ServiceRoleV2{
+				Kind:    KindServiceRole,
 				Version: V2,
 				Metadata: Metadata{
 					Name:      "name1",
 					Namespace: defaults.Namespace,
 				},
-				Spec: RoleSpecV2{},
+				Spec: ServiceRoleSpecV2{},
 			},
 		},
 		{
@@ -102,14 +102,14 @@ func (s *RoleSuite) TestRoleParse(c *C) {
                  }
               }
             }`,
-			role: RoleV2{
-				Kind:    KindRole,
+			role: ServiceRoleV2{
+				Kind:    KindServiceRole,
 				Version: V2,
 				Metadata: Metadata{
 					Name:      "name1",
 					Namespace: defaults.Namespace,
 				},
-				Spec: RoleSpecV2{
+				Spec: ServiceRoleSpecV2{
 					MaxSessionTTL: Duration{20 * time.Hour},
 					NodeLabels:    map[string]string{"a": "b"},
 					Namespaces:    []string{"system", "default"},
@@ -129,14 +129,14 @@ spec:
   resources:
     role: [read, write]
 `,
-			role: RoleV2{
-				Kind:    KindRole,
+			role: ServiceRoleV2{
+				Kind:    KindServiceRole,
 				Version: V2,
 				Metadata: Metadata{
 					Name:      "name1",
 					Namespace: defaults.Namespace,
 				},
-				Spec: RoleSpecV2{
+				Spec: ServiceRoleSpecV2{
 					MaxSessionTTL: Duration{20 * time.Hour},
 					NodeLabels:    map[string]string{"a": "b"},
 					Namespaces:    []string{"system", "default"},
@@ -147,7 +147,7 @@ spec:
 	}
 	for i, tc := range testCases {
 		comment := Commentf("test case %v", i)
-		role, err := UnmarshalRole([]byte(tc.in))
+		role, err := UnmarshalServiceRole([]byte(tc.in))
 		if tc.error != nil {
 			c.Assert(err, NotNil, comment)
 		} else {
@@ -157,14 +157,14 @@ spec:
 			out, err := json.Marshal(*role)
 			c.Assert(err, IsNil, comment)
 
-			role2, err := UnmarshalRole(out)
+			role2, err := UnmarshalServiceRole(out)
 			c.Assert(err, IsNil, comment)
 			c.Assert(*role2, DeepEquals, tc.role, comment)
 		}
 	}
 }
 
-func (s *RoleSuite) TestCheckAccess(c *C) {
+func (s *ServiceRoleSuite) TestCheckAccess(c *C) {
 	type check struct {
 		server    Server
 		hasAccess bool
@@ -192,12 +192,12 @@ func (s *RoleSuite) TestCheckAccess(c *C) {
 	}
 	testCases := []struct {
 		name   string
-		roles  []RoleV2
+		roles  []ServiceRoleV2
 		checks []check
 	}{
 		{
 			name:  "empty role set has access to nothing",
-			roles: []RoleV2{},
+			roles: []ServiceRoleV2{},
 			checks: []check{
 				{server: serverA, login: "root", hasAccess: false},
 				{server: serverB, login: "root", hasAccess: false},
@@ -206,13 +206,13 @@ func (s *RoleSuite) TestCheckAccess(c *C) {
 		},
 		{
 			name: "role is limited to default namespace",
-			roles: []RoleV2{
-				RoleV2{
+			roles: []ServiceRoleV2{
+				ServiceRoleV2{
 					Metadata: Metadata{
 						Name:      "name1",
 						Namespace: defaults.Namespace,
 					},
-					Spec: RoleSpecV2{
+					Spec: ServiceRoleSpecV2{
 						MaxSessionTTL: Duration{20 * time.Hour},
 						Logins:        []string{"admin"},
 						NodeLabels:    map[string]string{Wildcard: Wildcard},
@@ -231,13 +231,13 @@ func (s *RoleSuite) TestCheckAccess(c *C) {
 		},
 		{
 			name: "role is limited to labels in default namespace",
-			roles: []RoleV2{
-				RoleV2{
+			roles: []ServiceRoleV2{
+				ServiceRoleV2{
 					Metadata: Metadata{
 						Name:      "name1",
 						Namespace: defaults.Namespace,
 					},
-					Spec: RoleSpecV2{
+					Spec: ServiceRoleSpecV2{
 						MaxSessionTTL: Duration{20 * time.Hour},
 						Logins:        []string{"admin"},
 						NodeLabels:    map[string]string{"role": "worker"},
@@ -256,25 +256,25 @@ func (s *RoleSuite) TestCheckAccess(c *C) {
 		},
 		{
 			name: "one role is more permissive than another",
-			roles: []RoleV2{
-				RoleV2{
+			roles: []ServiceRoleV2{
+				ServiceRoleV2{
 					Metadata: Metadata{
 						Name:      "name1",
 						Namespace: defaults.Namespace,
 					},
-					Spec: RoleSpecV2{
+					Spec: ServiceRoleSpecV2{
 						MaxSessionTTL: Duration{20 * time.Hour},
 						Logins:        []string{"admin"},
 						NodeLabels:    map[string]string{"role": "worker"},
 						Namespaces:    []string{defaults.Namespace},
 					},
 				},
-				RoleV2{
+				ServiceRoleV2{
 					Metadata: Metadata{
 						Name:      "name1",
 						Namespace: defaults.Namespace,
 					},
-					Spec: RoleSpecV2{
+					Spec: ServiceRoleSpecV2{
 						MaxSessionTTL: Duration{20 * time.Hour},
 						Logins:        []string{"root", "admin"},
 						NodeLabels:    map[string]string{Wildcard: Wildcard},
@@ -294,7 +294,7 @@ func (s *RoleSuite) TestCheckAccess(c *C) {
 	}
 	for i, tc := range testCases {
 
-		var set RoleSet
+		var set ServiceRoleSet
 		for i := range tc.roles {
 			set = append(set, &tc.roles[i])
 		}
@@ -311,7 +311,7 @@ func (s *RoleSuite) TestCheckAccess(c *C) {
 	}
 }
 
-func (s *RoleSuite) TestCheckResourceAccess(c *C) {
+func (s *ServiceRoleSuite) TestCheckResourceAccess(c *C) {
 	type check struct {
 		hasAccess bool
 		action    string
@@ -320,25 +320,25 @@ func (s *RoleSuite) TestCheckResourceAccess(c *C) {
 	}
 	testCases := []struct {
 		name   string
-		roles  []RoleV2
+		roles  []ServiceRoleV2
 		checks []check
 	}{
 		{
 			name:  "empty role set has access to nothing",
-			roles: []RoleV2{},
+			roles: []ServiceRoleV2{},
 			checks: []check{
 				{resource: KindUser, action: ActionWrite, namespace: defaults.Namespace, hasAccess: false},
 			},
 		},
 		{
 			name: "user can read sessions in default namespace",
-			roles: []RoleV2{
-				RoleV2{
+			roles: []ServiceRoleV2{
+				ServiceRoleV2{
 					Metadata: Metadata{
 						Name:      "name1",
 						Namespace: defaults.Namespace,
 					},
-					Spec: RoleSpecV2{
+					Spec: ServiceRoleSpecV2{
 						Namespaces: []string{defaults.Namespace},
 						Resources:  map[string][]string{KindSession: []string{ActionRead}},
 					},
@@ -351,23 +351,23 @@ func (s *RoleSuite) TestCheckResourceAccess(c *C) {
 		},
 		{
 			name: "user can read sessions in system namespace and write stuff in default namespace",
-			roles: []RoleV2{
-				RoleV2{
+			roles: []ServiceRoleV2{
+				ServiceRoleV2{
 					Metadata: Metadata{
 						Name:      "name1",
 						Namespace: defaults.Namespace,
 					},
-					Spec: RoleSpecV2{
+					Spec: ServiceRoleSpecV2{
 						Namespaces: []string{"system"},
 						Resources:  map[string][]string{KindSession: []string{ActionRead}},
 					},
 				},
-				RoleV2{
+				ServiceRoleV2{
 					Metadata: Metadata{
 						Name:      "name2",
 						Namespace: defaults.Namespace,
 					},
-					Spec: RoleSpecV2{
+					Spec: ServiceRoleSpecV2{
 						Namespaces: []string{defaults.Namespace},
 						Resources:  map[string][]string{KindSession: []string{ActionWrite, ActionRead}},
 					},
@@ -377,13 +377,13 @@ func (s *RoleSuite) TestCheckResourceAccess(c *C) {
 				{resource: KindSession, action: ActionRead, namespace: defaults.Namespace, hasAccess: true},
 				{resource: KindSession, action: ActionWrite, namespace: defaults.Namespace, hasAccess: true},
 				{resource: KindSession, action: ActionWrite, namespace: "system", hasAccess: false},
-				{resource: KindRole, action: ActionRead, namespace: defaults.Namespace, hasAccess: false},
+				{resource: KindServiceRole, action: ActionRead, namespace: defaults.Namespace, hasAccess: false},
 			},
 		},
 	}
 	for i, tc := range testCases {
 
-		var set RoleSet
+		var set ServiceRoleSet
 		for i := range tc.roles {
 			set = append(set, &tc.roles[i])
 		}

@@ -36,20 +36,20 @@ func NewAccessService(backend backend.Backend) *AccessService {
 	return &AccessService{Backend: backend}
 }
 
-// DeleteAllRoles deletes all roles
-func (s *AccessService) DeleteAllRoles() error {
+// DeleteAllServiceRoles deletes all roles
+func (s *AccessService) DeleteAllServiceRoles() error {
 	return s.DeleteBucket([]string{}, "roles")
 }
 
-// GetRoles returns a list of roles registered with the local auth server
-func (s *AccessService) GetRoles() ([]services.Role, error) {
+// GetServiceRoles returns a list of roles registered with the local auth server
+func (s *AccessService) GetServiceRoles() ([]services.ServiceRole, error) {
 	keys, err := s.GetKeys([]string{"roles"})
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	var out []services.Role
+	var out []services.ServiceRole
 	for _, name := range keys {
-		u, err := s.GetRole(name)
+		u, err := s.GetServiceRole(name)
 		if err != nil {
 			if trace.IsNotFound(err) {
 				continue
@@ -58,13 +58,13 @@ func (s *AccessService) GetRoles() ([]services.Role, error) {
 		}
 		out = append(out, u)
 	}
-	sort.Sort(services.SortedRoles(out))
+	sort.Sort(services.SortedServiceRoles(out))
 	return out, nil
 }
 
-// UpsertRole updates parameters about role
-func (s *AccessService) UpsertRole(role services.Role, ttl time.Duration) error {
-	data, err := services.GetRoleMarshaler().MarshalRole(role)
+// UpsertServiceRole updates parameters about role
+func (s *AccessService) UpsertServiceRole(role services.ServiceRole, ttl time.Duration) error {
+	data, err := services.GetServiceRoleMarshaler().MarshalServiceRole(role)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -82,8 +82,8 @@ func (s *AccessService) UpsertRole(role services.Role, ttl time.Duration) error 
 	return nil
 }
 
-// GetRole returns a role by name
-func (s *AccessService) GetRole(name string) (services.Role, error) {
+// GetServiceRole returns a role by name
+func (s *AccessService) GetServiceRole(name string) (services.ServiceRole, error) {
 	if name == "" {
 		return nil, trace.BadParameter("missing role name")
 	}
@@ -94,11 +94,11 @@ func (s *AccessService) GetRole(name string) (services.Role, error) {
 		}
 		return nil, trace.Wrap(err)
 	}
-	return services.GetRoleMarshaler().UnmarshalRole(data)
+	return services.GetServiceRoleMarshaler().UnmarshalServiceRole(data)
 }
 
-// DeleteRole deletes a role with all the keys from the backend
-func (s *AccessService) DeleteRole(role string) error {
+// DeleteServiceRole deletes a role with all the keys from the backend
+func (s *AccessService) DeleteServiceRole(role string) error {
 	err := s.DeleteBucket([]string{"roles"}, role)
 	if err != nil {
 		if trace.IsNotFound(err) {
