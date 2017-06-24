@@ -129,7 +129,7 @@ func (cs *CachingAuthClient) fetchAll() error {
 	var errors []error
 	_, err := cs.GetDomainName()
 	errors = append(errors, err)
-	_, err = cs.GetRoles()
+	_, err = cs.GetServiceRoles()
 	errors = append(errors, err)
 	namespaces, err := cs.GetNamespaces()
 	errors = append(errors, err)
@@ -170,25 +170,25 @@ func (cs *CachingAuthClient) GetDomainName() (clusterName string, err error) {
 	return clusterName, err
 }
 
-// GetRoles is a part of auth.AccessPoint implementation
-func (cs *CachingAuthClient) GetRoles() (roles []services.Role, err error) {
+// GetServiceRoles is a part of auth.AccessPoint implementation
+func (cs *CachingAuthClient) GetServiceRoles() (roles []services.ServiceRole, err error) {
 	err = cs.try(func() error {
-		roles, err = cs.ap.GetRoles()
+		roles, err = cs.ap.GetServiceRoles()
 		return err
 	})
 	if err != nil {
 		if trace.IsConnectionProblem(err) {
-			return cs.access.GetRoles()
+			return cs.access.GetServiceRoles()
 		}
 		return roles, err
 	}
-	if err := cs.access.DeleteAllRoles(); err != nil {
+	if err := cs.access.DeleteAllServiceRoles(); err != nil {
 		if !trace.IsNotFound(err) {
 			return nil, trace.Wrap(err)
 		}
 	}
 	for _, role := range roles {
-		if err := cs.access.UpsertRole(role, backend.Forever); err != nil {
+		if err := cs.access.UpsertServiceRole(role, backend.Forever); err != nil {
 			return nil, trace.Wrap(err)
 		}
 	}
@@ -207,25 +207,25 @@ func (cs *CachingAuthClient) setTTL(r services.Resource) {
 	r.SetTTL(cs.Clock, cs.CacheTTL)
 }
 
-// GetRole is a part of auth.AccessPoint implementation
-func (cs *CachingAuthClient) GetRole(name string) (role services.Role, err error) {
+// GetServiceRole is a part of auth.AccessPoint implementation
+func (cs *CachingAuthClient) GetServiceRole(name string) (role services.ServiceRole, err error) {
 	err = cs.try(func() error {
-		role, err = cs.ap.GetRole(name)
+		role, err = cs.ap.GetServiceRole(name)
 		return err
 	})
 	if err != nil {
 		if trace.IsConnectionProblem(err) {
-			return cs.access.GetRole(name)
+			return cs.access.GetServiceRole(name)
 		}
 		return role, err
 	}
-	if err := cs.access.DeleteRole(name); err != nil {
+	if err := cs.access.DeleteServiceRole(name); err != nil {
 		if !trace.IsNotFound(err) {
 			return nil, trace.Wrap(err)
 		}
 	}
 	cs.setTTL(role)
-	if err := cs.access.UpsertRole(role, backend.Forever); err != nil {
+	if err := cs.access.UpsertServiceRole(role, backend.Forever); err != nil {
 		return nil, trace.Wrap(err)
 	}
 	return role, nil

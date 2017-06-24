@@ -13,7 +13,7 @@ type Role struct {
 }
 
 // NewRole creates a new instance of UI Role
-func NewRole(sRole teleservices.Role) *Role {
+func NewRole(sRole teleservices.ServiceRole) *Role {
 	uiRole := Role{
 		Name: sRole.GetName(),
 	}
@@ -23,8 +23,8 @@ func NewRole(sRole teleservices.Role) *Role {
 }
 
 // ToTeleRole converts UI Role to Storage Role
-func (r *Role) ToTeleRole() (teleservices.Role, error) {
-	teleRole, err := teleservices.NewRole(r.Name, teleservices.RoleSpecV2{})
+func (r *Role) ToTeleRole() (teleservices.ServiceRole, error) {
+	teleRole, err := teleservices.NewServiceRole(r.Name, teleservices.ServiceRoleSpecV2{})
 	if err != nil {
 		return nil, err
 	}

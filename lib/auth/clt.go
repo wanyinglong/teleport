@@ -1256,8 +1256,8 @@ func (c *Client) DeleteNamespace(name string) error {
 	return trace.Wrap(err)
 }
 
-// GetRoles returns a list of roles
-func (c *Client) GetRoles() ([]services.Role, error) {
+// GetServiceRoles returns a list of service roles.
+func (c *Client) GetServiceRoles() ([]services.ServiceRole, error) {
 	out, err := c.Get(c.Endpoint("roles"), url.Values{})
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -1266,9 +1266,9 @@ func (c *Client) GetRoles() ([]services.Role, error) {
 	if err := json.Unmarshal(out.Bytes(), &items); err != nil {
 		return nil, trace.Wrap(err)
 	}
-	roles := make([]services.Role, len(items))
+	roles := make([]services.ServiceRole, len(items))
 	for i, roleBytes := range items {
-		role, err := services.GetRoleMarshaler().UnmarshalRole(roleBytes)
+		role, err := services.GetServiceRoleMarshaler().UnmarshalServiceRole(roleBytes)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
@@ -1277,9 +1277,9 @@ func (c *Client) GetRoles() ([]services.Role, error) {
 	return roles, nil
 }
 
-// UpsertRole creates or updates role
-func (c *Client) UpsertRole(role services.Role, ttl time.Duration) error {
-	data, err := services.GetRoleMarshaler().MarshalRole(role)
+// UpsertServiceRole creates or updates a service role.
+func (c *Client) UpsertServiceRole(role services.ServiceRole, ttl time.Duration) error {
+	data, err := services.GetServiceRoleMarshaler().MarshalServiceRole(role)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -1287,8 +1287,8 @@ func (c *Client) UpsertRole(role services.Role, ttl time.Duration) error {
 	return trace.Wrap(err)
 }
 
-// GetRole returns role by name
-func (c *Client) GetRole(name string) (services.Role, error) {
+// GetServiceRole returns a service role by name.
+func (c *Client) GetServiceRole(name string) (services.ServiceRole, error) {
 	if name == "" {
 		return nil, trace.BadParameter("missing name")
 	}
@@ -1296,15 +1296,15 @@ func (c *Client) GetRole(name string) (services.Role, error) {
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	role, err := services.GetRoleMarshaler().UnmarshalRole(out.Bytes())
+	role, err := services.GetServiceRoleMarshaler().UnmarshalServiceRole(out.Bytes())
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 	return role, nil
 }
 
-// DeleteRole deletes role by name
-func (c *Client) DeleteRole(name string) error {
+// DeleteServiceRole deletes a service role by name.
+func (c *Client) DeleteServiceRole(name string) error {
 	_, err := c.Delete(c.Endpoint("roles", name))
 	return trace.Wrap(err)
 }
@@ -1400,8 +1400,8 @@ func (c *Client) DeleteAllNodes(namespace string) error {
 	return trace.BadParameter("not implemented")
 }
 
-// DeleteAllRoles deletes all roles
-func (c *Client) DeleteAllRoles() error {
+// DeleteAllServiceRoles deletes all service roles.
+func (c *Client) DeleteAllServiceRoles() error {
 	return trace.BadParameter("not implemented")
 }
 

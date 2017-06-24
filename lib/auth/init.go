@@ -93,8 +93,8 @@ type InitConfig struct {
 	// UniversalSecondFactorService is a service to get and set universal second factor settings.
 	UniversalSecondFactorService services.UniversalSecondFactorSettings
 
-	// Roles is a set of roles to create
-	Roles []services.Role
+	// ServiecRoles is a set of roles to create
+	ServiceRoles []services.ServiceRole
 
 	// StaticTokens are pre-defined host provisioning tokens supplied via config file for
 	// environments where paranoid security is not needed
@@ -171,11 +171,11 @@ func Init(cfg InitConfig, dynamicConfig bool) (*AuthServer, *Identity, error) {
 			}
 		}
 
-		for _, role := range cfg.Roles {
-			if err := asrv.UpsertRole(role, backend.Forever); err != nil {
+		for _, role := range cfg.ServiceRoles {
+			if err := asrv.UpsertServiceRole(role, backend.Forever); err != nil {
 				return nil, nil, trace.Wrap(err)
 			}
-			log.Infof("[INIT] Created Role: %v", role)
+			log.Infof("[INIT] Created Service Role: %v", role)
 		}
 
 		for i := range cfg.Authorities {
@@ -328,15 +328,15 @@ func migrateUsers(asrv *AuthServer) error {
 		log.Infof("[MIGRATION] Legacy User: %v", user.GetName())
 
 		// create role for user and upsert to backend
-		role := services.RoleForUser(user)
+		role := services.ServiceRoleForUser(user)
 		role.SetLogins(raw.AllowedLogins)
-		err = asrv.UpsertRole(role, backend.Forever)
+		err = asrv.UpsertServiceRole(role, backend.Forever)
 		if err != nil {
 			return trace.Wrap(err)
 		}
 
 		// upsert new user to backend
-		user.AddRole(role.GetName())
+		user.AddServiceRole(role.GetName())
 		if err := asrv.UpsertUser(user); err != nil {
 			return trace.Wrap(err)
 		}
@@ -358,7 +358,7 @@ func migrateCertAuthority(asrv *AuthServer) error {
 			continue
 		}
 
-		_, err := asrv.GetRole(services.RoleNameForCertAuthority(ca.GetClusterName()))
+		_, err := asrv.GetServiceRole(services.ServiceRoleNameForCertAuthority(ca.GetClusterName()))
 		if err == nil {
 			continue
 		}
@@ -370,7 +370,7 @@ func migrateCertAuthority(asrv *AuthServer) error {
 
 		// create role for certificate authority and upsert to backend
 		newCA, role := services.ConvertV1CertAuthority(&raw)
-		err = asrv.UpsertRole(role, backend.Forever)
+		err = asrv.UpsertServiceRole(role, backend.Forever)
 		if err != nil {
 			return trace.Wrap(err)
 		}

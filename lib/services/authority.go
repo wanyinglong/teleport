@@ -131,9 +131,9 @@ type CertAuthority interface {
 	// SetServiceRoleMap sets role map
 	SetServiceRoleMap(m ServiceRoleMap)
 	// GetRoles returns a list of roles assumed by users signed by this CA
-	GetRoles() []string
+	GetServiceRoles() []string
 	// SetRoles sets assigned roles for this certificate authority
-	SetRoles(roles []string)
+	SetServiceRoles(roles []string)
 	// FirstSigningKey returns first signing key or returns error if it's not here
 	// The first key is returned because multiple keys can exist during key rotation.
 	FirstSigningKey() ([]byte, error)
@@ -293,13 +293,13 @@ func (ca *CertAuthorityV2) GetCheckingKeys() [][]byte {
 	return ca.Spec.CheckingKeys
 }
 
-// GetRoles returns a list of roles assumed by users signed by this CA
-func (ca *CertAuthorityV2) GetRoles() []string {
+// GetServiceRoles returns a list of roles assumed by users signed by this CA
+func (ca *CertAuthorityV2) GetServiceRoles() []string {
 	return ca.Spec.ServiceRoles
 }
 
-// SetRoles sets assigned roles for this certificate authority
-func (ca *CertAuthorityV2) SetRoles(roles []string) {
+// SetServiceRoles sets assigned roles for this certificate authority
+func (ca *CertAuthorityV2) SetServiceRoles(roles []string) {
 	ca.Spec.ServiceRoles = roles
 }
 

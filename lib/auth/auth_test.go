@@ -243,7 +243,7 @@ func (s *AuthSuite) TestBuildRolesInvalid(c *C) {
 	}
 
 	// try and build roles should be invalid since we have no mappings
-	_, err := s.a.buildRoles(oidcConnector, ident, claims)
+	_, err := s.a.buildServiceRoles(oidcConnector, ident, claims)
 	c.Assert(err, NotNil)
 }
 
@@ -256,11 +256,11 @@ func (s *AuthSuite) TestBuildRolesStatic(c *C) {
 		RedirectURL:  "https://localhost:3080/v1/webapi/oidc/callback",
 		Display:      "sign in with example.com",
 		Scope:        []string{"foo", "bar"},
-		ClaimsToRoles: []services.ClaimMapping{
+		ClaimsToServiceRoles: []services.ClaimMapping{
 			services.ClaimMapping{
-				Claim: "roles",
-				Value: "teleport-user",
-				Roles: []string{"user"},
+				Claim:        "roles",
+				Value:        "teleport-user",
+				ServiceRoles: []string{"user"},
 			},
 		},
 	})
@@ -278,7 +278,7 @@ func (s *AuthSuite) TestBuildRolesStatic(c *C) {
 	}
 
 	// build roles and check that we mapped to "user" role
-	roles, err := s.a.buildRoles(oidcConnector, ident, claims)
+	roles, err := s.a.buildServiceRoles(oidcConnector, ident, claims)
 	c.Assert(err, IsNil)
 	c.Assert(roles, HasLen, 1)
 	c.Assert(roles[0], Equals, "user")
@@ -293,18 +293,18 @@ func (s *AuthSuite) TestBuildRolesTemplate(c *C) {
 		RedirectURL:  "https://localhost:3080/v1/webapi/oidc/callback",
 		Display:      "sign in with example.com",
 		Scope:        []string{"foo", "bar"},
-		ClaimsToRoles: []services.ClaimMapping{
+		ClaimsToServiceRoles: []services.ClaimMapping{
 			services.ClaimMapping{
 				Claim: "roles",
 				Value: "teleport-user",
-				RoleTemplate: &services.RoleV2{
-					Kind:    services.KindRole,
+				ServiceRoleTemplate: &services.ServiceRoleV2{
+					Kind:    services.KindServiceRole,
 					Version: services.V2,
 					Metadata: services.Metadata{
 						Name:      `{{index . "email"}}`,
 						Namespace: defaults.Namespace,
 					},
-					Spec: services.RoleSpecV2{
+					Spec: services.ServiceRoleSpecV2{
 						MaxSessionTTL: services.NewDuration(90 * 60 * time.Minute),
 						Logins:        []string{`{{index . "nickname"}}`, `root`},
 						NodeLabels:    map[string]string{"*": "*"},
@@ -328,11 +328,11 @@ func (s *AuthSuite) TestBuildRolesTemplate(c *C) {
 	}
 
 	// build roles
-	roles, err := s.a.buildRoles(oidcConnector, ident, claims)
+	roles, err := s.a.buildServiceRoles(oidcConnector, ident, claims)
 	c.Assert(err, IsNil)
 
 	// check that the newly created role was both returned and upserted into the backend
-	r, err := s.a.GetRoles()
+	r, err := s.a.GetServiceRoles()
 	c.Assert(err, IsNil)
 	c.Assert(r, HasLen, 1)
 	c.Assert(r[0].GetName(), Equals, "foo@example.com")

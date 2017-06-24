@@ -196,15 +196,15 @@ func (s *AuthServer) CreateUserWithOTP(token string, password string, otpToken s
 	}
 
 	// apply user allowed logins
-	role := services.RoleForUser(tokenData.User.V2())
+	role := services.ServiceRoleForUser(tokenData.User.V2())
 	role.SetLogins(tokenData.User.AllowedLogins)
-	if err := s.UpsertRole(role, backend.Forever); err != nil {
+	if err := s.UpsertServiceRole(role, backend.Forever); err != nil {
 		return nil, trace.Wrap(err)
 	}
 
 	// Allowed logins are not going to be used anymore
 	tokenData.User.AllowedLogins = nil
-	tokenData.User.Roles = append(tokenData.User.Roles, role.GetName())
+	tokenData.User.ServiceRoles = append(tokenData.User.ServiceRoles, role.GetName())
 	user := tokenData.User.V2()
 	if err = s.UpsertUser(user); err != nil {
 		return nil, trace.Wrap(err)
@@ -242,15 +242,15 @@ func (s *AuthServer) CreateUserWithoutOTP(token string, password string) (servic
 	}
 
 	// apply user allowed logins
-	role := services.RoleForUser(tokenData.User.V2())
+	role := services.ServiceRoleForUser(tokenData.User.V2())
 	role.SetLogins(tokenData.User.AllowedLogins)
-	if err := s.UpsertRole(role, backend.Forever); err != nil {
+	if err := s.UpsertServiceRole(role, backend.Forever); err != nil {
 		return nil, trace.Wrap(err)
 	}
 
 	// allowed logins are not going to be used anymore
 	tokenData.User.AllowedLogins = nil
-	tokenData.User.Roles = append(tokenData.User.Roles, role.GetName())
+	tokenData.User.ServiceRoles = append(tokenData.User.ServiceRoles, role.GetName())
 	user := tokenData.User.V2()
 	if err = s.UpsertUser(user); err != nil {
 		return nil, trace.Wrap(err)
@@ -312,15 +312,15 @@ func (s *AuthServer) CreateUserWithU2FToken(token string, password string, respo
 		return nil, trace.Wrap(err)
 	}
 
-	role := services.RoleForUser(tokenData.User.V2())
+	role := services.ServiceRoleForUser(tokenData.User.V2())
 	role.SetLogins(tokenData.User.AllowedLogins)
-	if err := s.UpsertRole(role, backend.Forever); err != nil {
+	if err := s.UpsertServiceRole(role, backend.Forever); err != nil {
 		return nil, trace.Wrap(err)
 	}
 
 	// Allowed logins are not going to be used anymore
 	tokenData.User.AllowedLogins = nil
-	tokenData.User.Roles = append(tokenData.User.Roles, role.GetName())
+	tokenData.User.ServiceRoles = append(tokenData.User.ServiceRoles, role.GetName())
 	user := tokenData.User.V2()
 	if err = s.UpsertUser(user); err != nil {
 		return nil, trace.Wrap(err)
@@ -346,13 +346,13 @@ func (s *AuthServer) CreateUserWithU2FToken(token string, password string, respo
 }
 
 func (a *AuthServer) DeleteUser(user string) error {
-	role, err := a.Access.GetRole(services.RoleNameForUser(user))
+	role, err := a.Access.GetServiceRole(services.ServiceRoleNameForUser(user))
 	if err != nil {
 		if !trace.IsNotFound(err) {
 			return trace.Wrap(err)
 		}
 	} else {
-		if err := a.Access.DeleteRole(role.GetName()); err != nil {
+		if err := a.Access.DeleteServiceRole(role.GetName()); err != nil {
 			if !trace.IsNotFound(err) {
 				return trace.Wrap(err)
 			}

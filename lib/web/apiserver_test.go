@@ -193,13 +193,13 @@ func (s *WebSuite) SetUpTest(c *C) {
 
 	teleUser, err := services.NewUser(s.user)
 	c.Assert(err, IsNil)
-	role := services.RoleForUser(teleUser)
+	role := services.ServiceRoleForUser(teleUser)
 	role.SetLogins([]string{s.user})
 	role.SetResource(services.Wildcard, services.RW())
-	err = s.authServer.UpsertRole(role, backend.Forever)
+	err = s.authServer.UpsertServiceRole(role, backend.Forever)
 	c.Assert(err, IsNil)
 
-	teleUser.AddRole(role.GetName())
+	teleUser.AddServiceRole(role.GetName())
 	err = s.authServer.UpsertUser(teleUser)
 	c.Assert(err, IsNil)
 
@@ -435,7 +435,7 @@ func (s *WebSuite) TestSAMLSuccess(c *C) {
 	c.Assert(err, IsNil)
 	err = connector.CheckAndSetDefaults()
 
-	role, err := services.NewRole(connector.GetAttributesToRoles()[0].Roles[0], services.RoleSpecV2{
+	role, err := services.NewServiceRole(connector.GetAttributesToServiceRoles()[0].ServiceRoles[0], services.ServiceRoleSpecV2{
 		MaxSessionTTL: services.NewDuration(defaults.MaxCertDuration),
 		NodeLabels:    map[string]string{services.Wildcard: services.Wildcard},
 		Namespaces:    []string{defaults.Namespace},
@@ -445,7 +445,7 @@ func (s *WebSuite) TestSAMLSuccess(c *C) {
 	})
 	c.Assert(err, IsNil)
 	role.SetLogins([]string{s.user})
-	err = s.roleAuth.UpsertRole(role, backend.Forever)
+	err = s.roleAuth.UpsertServiceRole(role, backend.Forever)
 	c.Assert(err, IsNil)
 
 	err = s.roleAuth.CreateSAMLConnector(connector)
@@ -550,11 +550,11 @@ func (s *WebSuite) authPack(c *C) *authPack {
 
 	teleUser, err := services.NewUser(user)
 	c.Assert(err, IsNil)
-	role := services.RoleForUser(teleUser)
+	role := services.ServiceRoleForUser(teleUser)
 	role.SetLogins([]string{s.user})
-	err = s.roleAuth.UpsertRole(role, backend.Forever)
+	err = s.roleAuth.UpsertServiceRole(role, backend.Forever)
 	c.Assert(err, IsNil)
-	teleUser.AddRole(role.GetName())
+	teleUser.AddServiceRole(role.GetName())
 
 	err = s.roleAuth.UpsertUser(teleUser)
 	c.Assert(err, IsNil)

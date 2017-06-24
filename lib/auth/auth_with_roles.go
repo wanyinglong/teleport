@@ -380,7 +380,7 @@ func (a *AuthWithRoles) GenerateUserCert(key []byte, username string, ttl time.D
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
-		checker, err = services.FetchRoles(user.GetRoles(), a.authServer)
+		checker, err = services.FetchServiceRoles(user.GetServiceRoles(), a.authServer)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
@@ -637,41 +637,41 @@ func (a *AuthWithRoles) DeleteNamespace(name string) error {
 	return a.authServer.DeleteNamespace(name)
 }
 
-// GetRoles returns a list of roles
-func (a *AuthWithRoles) GetRoles() ([]services.Role, error) {
-	if err := a.action(defaults.Namespace, services.KindRole, services.ActionRead); err != nil {
+// GetServiceRoles returns a list of service roles.
+func (a *AuthWithRoles) GetServiceRoles() ([]services.ServiceRole, error) {
+	if err := a.action(defaults.Namespace, services.KindServiceRole, services.ActionRead); err != nil {
 		return nil, trace.Wrap(err)
 	}
-	return a.authServer.GetRoles()
+	return a.authServer.GetServiceRoles()
 }
 
-// UpsertRole creates or updates role
-func (a *AuthWithRoles) UpsertRole(role services.Role, ttl time.Duration) error {
-	if err := a.action(defaults.Namespace, services.KindRole, services.ActionWrite); err != nil {
+// UpsertServiceRole creates or updates a service role.
+func (a *AuthWithRoles) UpsertServiceRole(role services.ServiceRole, ttl time.Duration) error {
+	if err := a.action(defaults.Namespace, services.KindServiceRole, services.ActionWrite); err != nil {
 		return trace.Wrap(err)
 	}
-	return a.authServer.UpsertRole(role, ttl)
+	return a.authServer.UpsertServiceRole(role, ttl)
 }
 
-// GetRole returns role by name
-func (a *AuthWithRoles) GetRole(name string) (services.Role, error) {
-	if err := a.action(defaults.Namespace, services.KindRole, services.ActionRead); err != nil {
+// GetServiceRole returns a service role by name.
+func (a *AuthWithRoles) GetServiceRole(name string) (services.ServiceRole, error) {
+	if err := a.action(defaults.Namespace, services.KindServiceRole, services.ActionRead); err != nil {
 		// allow user to read roles assigned to them
 
-		log.Infof("%v %v %v", a.user, a.user.GetRoles(), name)
-		if !utils.SliceContainsStr(a.user.GetRoles(), name) {
+		log.Infof("%v %v %v", a.user, a.user.GetServiceRoles(), name)
+		if !utils.SliceContainsStr(a.user.GetServiceRoles(), name) {
 			return nil, trace.Wrap(err)
 		}
 	}
-	return a.authServer.GetRole(name)
+	return a.authServer.GetServiceRole(name)
 }
 
-// DeleteRole deletes role by name
-func (a *AuthWithRoles) DeleteRole(name string) error {
-	if err := a.action(defaults.Namespace, services.KindRole, services.ActionWrite); err != nil {
+// DeleteServiceRole deletes a service role by name.
+func (a *AuthWithRoles) DeleteServiceRole(name string) error {
+	if err := a.action(defaults.Namespace, services.KindServiceRole, services.ActionWrite); err != nil {
 		return trace.Wrap(err)
 	}
-	return a.authServer.DeleteRole(name)
+	return a.authServer.DeleteServiceRole(name)
 }
 
 func (a *AuthWithRoles) GetClusterAuthPreference() (services.AuthPreference, error) {
@@ -735,8 +735,8 @@ func (a *AuthWithRoles) DeleteAllNodes(namespace string) error {
 	return trace.BadParameter("not implemented")
 }
 
-// DeleteAllRoles deletes all roles
-func (a *AuthWithRoles) DeleteAllRoles() error {
+// DeleteAllServiceRoles deletes all roles
+func (a *AuthWithRoles) DeleteAllServiceRoles() error {
 	return trace.BadParameter("not implemented")
 }
 

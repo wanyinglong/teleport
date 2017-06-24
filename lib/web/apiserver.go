@@ -320,7 +320,7 @@ func (m *Handler) getUserACL(w http.ResponseWriter, r *http.Request, _ httproute
 		return nil, trace.Wrap(err)
 	}
 
-	allTeleRoles, err := clt.GetRoles()
+	allTeleRoles, err := clt.GetServiceRoles()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -330,7 +330,7 @@ func (m *Handler) getUserACL(w http.ResponseWriter, r *http.Request, _ httproute
 		return nil, trace.Wrap(err)
 	}
 
-	userTeleRoles := user.GetRoles()
+	userTeleRoles := user.GetServiceRoles()
 	roleNamesMap := map[string]bool{}
 	for _, name := range userTeleRoles {
 		roleNamesMap[name] = true
@@ -692,9 +692,9 @@ func NewSessionResponse(ctx *SessionContext) (*CreateSessionResponse, error) {
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	var roles services.RoleSet
-	for _, roleName := range user.GetRoles() {
-		role, err := clt.GetRole(roleName)
+	var roles services.ServiceRoleSet
+	for _, roleName := range user.GetServiceRoles() {
+		role, err := clt.GetServiceRole(roleName)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}

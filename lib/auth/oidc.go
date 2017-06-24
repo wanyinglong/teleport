@@ -171,8 +171,8 @@ func (a *AuthServer) ValidateOIDCAuthCallback(q url.Values) (*OIDCAuthResponse, 
 		Req:      *req,
 	}
 
-	log.Debugf("[OIDC] Applying %v claims to roles mappings", len(connector.GetClaimsToRoles()))
-	if len(connector.GetClaimsToRoles()) != 0 {
+	log.Debugf("[OIDC] Applying %v claims to roles mappings", len(connector.GetClaimsToServiceRoles()))
+	if len(connector.GetClaimsToServiceRoles()) != 0 {
 		if err := a.createOIDCUser(connector, ident, claims); err != nil {
 			return nil, trace.Wrap(err)
 		}
@@ -189,8 +189,8 @@ func (a *AuthServer) ValidateOIDCAuthCallback(q url.Values) (*OIDCAuthResponse, 
 	}
 	response.Username = user.GetName()
 
-	var roles services.RoleSet
-	roles, err = services.FetchRoles(user.GetRoles(), a.Access)
+	var roles services.ServiceRoleSet
+	roles, err = services.FetchServiceRoles(user.GetServiceRoles(), a.Access)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -254,14 +254,14 @@ type OIDCAuthResponse struct {
 	HostSigners []services.CertAuthority `json:"host_signers"`
 }
 
-// buildRoles takes a connector and claims and returns a slice of roles. If the claims
+// buildServiceRoles takes a connector and claims and returns a slice of roles. If the claims
 // match a concrete roles in the connector, those roles are returned directly. If the
 // claims match a template role in the connector, then that role is first created from
 // the template, then returned.
-func (a *AuthServer) buildRoles(connector services.OIDCConnector, ident *oidc.Identity, claims jose.Claims) ([]string, error) {
+func (a *AuthServer) buildServiceRoles(connector services.OIDCConnector, ident *oidc.Identity, claims jose.Claims) ([]string, error) {
 	roles := connector.MapClaims(claims)
 	if len(roles) == 0 {
-		role, err := connector.RoleFromTemplate(claims)
+		role, err := connector.ServiceRoleFromTemplate(claims)
 		if err != nil {
 			log.Warningf("[OIDC] Unable to map claims to roles or role templates for %q: %v", connector.GetName(), err)
 			return nil, trace.AccessDenied("unable to map claims to roles or role templates for %q: %v", connector.GetName(), err)
@@ -271,7 +271,7 @@ func (a *AuthServer) buildRoles(connector services.OIDCConnector, ident *oidc.Id
 		ttl := ident.ExpiresAt.Sub(a.clock.Now())
 
 		// upsert templated role
-		err = a.Access.UpsertRole(role, ttl)
+		err = a.Access.UpsertServiceRole(role, ttl)
 		if err != nil {
 			log.Warningf("[OIDC] Unable to upsert templated role for connector: %q: %v", connector.GetName(), err)
 			return nil, trace.AccessDenied("unable to upsert templated role: %q: %v", connector.GetName(), err)
@@ -284,7 +284,7 @@ func (a *AuthServer) buildRoles(connector services.OIDCConnector, ident *oidc.Id
 }
 
 func (a *AuthServer) createOIDCUser(connector services.OIDCConnector, ident *oidc.Identity, claims jose.Claims) error {
-	roles, err := a.buildRoles(connector, ident, claims)
+	roles, err := a.buildServiceRoles(connector, ident, claims)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -298,7 +298,7 @@ func (a *AuthServer) createOIDCUser(connector services.OIDCConnector, ident *oid
 			Namespace: defaults.Namespace,
 		},
 		Spec: services.UserSpecV2{
-			Roles:          roles,
+			ServiceRoles:   roles,
 			Expires:        ident.ExpiresAt,
 			OIDCIdentities: []services.ExternalIdentity{{ConnectorID: connector.GetName(), Username: ident.Email}},
 			CreatedBy: services.CreatedBy{

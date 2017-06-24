@@ -683,7 +683,7 @@ type Authority struct {
 }
 
 // Parse reads values and returns parsed CertAuthority
-func (a *Authority) Parse() (services.CertAuthority, services.Role, error) {
+func (a *Authority) Parse() (services.CertAuthority, services.ServiceRole, error) {
 	ca := &services.CertAuthorityV1{
 		AllowedLogins: a.AllowedLogins,
 		DomainName:    a.DomainName,
@@ -726,10 +726,10 @@ type ClaimMapping struct {
 	// Value is claim value to match
 	Value string `yaml:"value"`
 	// Roles is a list of teleport roles to match
-	Roles []string `yaml:"roles,omitempty"`
+	ServiceRoles []string `yaml:"roles,omitempty"`
 	// RoleTemplate is a template for a role that will be filled
 	// with data from claims.
-	RoleTemplate *services.RoleV2 `yaml:"role_template,omitempty"`
+	ServiceRoleTemplate *services.ServiceRoleV2 `yaml:"role_template,omitempty"`
 }
 
 // OIDCConnector specifies configuration fo Open ID Connect compatible external
@@ -759,7 +759,7 @@ type OIDCConnector struct {
 	// note that oidc and email scopes are always requested
 	Scope []string `yaml:"scope"`
 	// ClaimsToRoles is a list of mappings of claims to roles
-	ClaimsToRoles []ClaimMapping `yaml:"claims_to_roles"`
+	ClaimsToServiceRoles []ClaimMapping `yaml:"claims_to_roles"`
 }
 
 // Parse parses config struct into services connector and checks if it's valid
@@ -769,29 +769,29 @@ func (o *OIDCConnector) Parse() (services.OIDCConnector, error) {
 	}
 
 	var mappings []services.ClaimMapping
-	for _, c := range o.ClaimsToRoles {
+	for _, c := range o.ClaimsToServiceRoles {
 		var roles []string
-		if len(c.Roles) > 0 {
-			roles = append(roles, c.Roles...)
+		if len(c.ServiceRoles) > 0 {
+			roles = append(roles, c.ServiceRoles...)
 		}
 
 		mappings = append(mappings, services.ClaimMapping{
-			Claim:        c.Claim,
-			Value:        c.Value,
-			Roles:        roles,
-			RoleTemplate: c.RoleTemplate,
+			Claim:               c.Claim,
+			Value:               c.Value,
+			ServiceRoles:        roles,
+			ServiceRoleTemplate: c.ServiceRoleTemplate,
 		})
 	}
 
 	other := &services.OIDCConnectorV1{
-		ID:            o.ID,
-		Display:       o.Display,
-		IssuerURL:     o.IssuerURL,
-		ClientID:      o.ClientID,
-		ClientSecret:  o.ClientSecret,
-		RedirectURL:   o.RedirectURL,
-		Scope:         o.Scope,
-		ClaimsToRoles: mappings,
+		ID:                   o.ID,
+		Display:              o.Display,
+		IssuerURL:            o.IssuerURL,
+		ClientID:             o.ClientID,
+		ClientSecret:         o.ClientSecret,
+		RedirectURL:          o.RedirectURL,
+		Scope:                o.Scope,
+		ClaimsToServiceRoles: mappings,
 	}
 	v2 := other.V2()
 	v2.SetACR(o.ACR)

@@ -233,7 +233,7 @@ func (s *AuthServer) GenerateUserCert(key []byte, user services.User, allowedLog
 		Username:              user.GetName(),
 		AllowedLogins:         allowedLogins,
 		TTL:                   ttl,
-		Roles:                 user.GetRoles(),
+		Roles:                 user.GetServiceRoles(),
 		Compatibility:         compatibility,
 		PermitAgentForwarding: canForwardAgents,
 	})
@@ -642,9 +642,9 @@ func (s *AuthServer) NewWebSession(userName string) (services.WebSession, error)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	var roles services.RoleSet
-	for _, roleName := range user.GetRoles() {
-		role, err := s.Access.GetRole(roleName)
+	var roles services.ServiceRoleSet
+	for _, roleName := range user.GetServiceRoles() {
+		role, err := s.Access.GetServiceRole(roleName)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
@@ -667,7 +667,7 @@ func (s *AuthServer) NewWebSession(userName string) (services.WebSession, error)
 		AllowedLogins:       allowedLogins,
 		TTL:                 bearerTokenTTL,
 		PermitAgentForwarding: roles.CanForwardAgents(),
-		Roles: user.GetRoles(),
+		Roles: user.GetServiceRoles(),
 	})
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -716,14 +716,14 @@ func (s *AuthServer) DeleteWebSession(user string, id string) error {
 	return trace.Wrap(s.Identity.DeleteWebSession(user, id))
 }
 
-func (a *AuthServer) DeleteRole(name string) error {
+func (a *AuthServer) DeleteServiceRole(name string) error {
 	// check if this role is used by CA or Users
 	users, err := a.Identity.GetUsers()
 	if err != nil {
 		return trace.Wrap(err)
 	}
 	for _, u := range users {
-		for _, r := range u.GetRoles() {
+		for _, r := range u.GetServiceRoles() {
 			if r == name {
 				return trace.BadParameter("role %v is used by user %v", name, u.GetName())
 			}
@@ -736,13 +736,13 @@ func (a *AuthServer) DeleteRole(name string) error {
 		return trace.Wrap(err)
 	}
 	for _, a := range cas {
-		for _, r := range a.GetRoles() {
+		for _, r := range a.GetServiceRoles() {
 			if r == name {
 				return trace.BadParameter("role %v is used by user cert authority %v", name, a.GetClusterName())
 			}
 		}
 	}
-	return a.Access.DeleteRole(name)
+	return a.Access.DeleteServiceRole(name)
 }
 
 const (

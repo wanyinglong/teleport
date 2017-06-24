@@ -15,7 +15,7 @@ const (
 )
 
 var adminResources = []string{
-	teleservices.KindRole,
+	teleservices.KindServiceRole,
 	teleservices.KindUser,
 	teleservices.KindOIDC,
 	teleservices.KindCertAuthority,
@@ -60,17 +60,17 @@ func MergeAccessSet(accessList []*RoleAccess) *RoleAccess {
 }
 
 // Apply applies this role access to Teleport Role
-func (a *RoleAccess) Apply(teleRole teleservices.Role) {
+func (a *RoleAccess) Apply(teleRole teleservices.ServiceRole) {
 	a.applyAdmin(teleRole)
 	a.applySSH(teleRole)
 }
 
-func (a *RoleAccess) init(teleRole teleservices.Role) {
+func (a *RoleAccess) init(teleRole teleservices.ServiceRole) {
 	a.initAdmin(teleRole)
 	a.initSSH(teleRole)
 }
 
-func (a *RoleAccess) initSSH(teleRole teleservices.Role) {
+func (a *RoleAccess) initSSH(teleRole teleservices.ServiceRole) {
 	a.SSH.MaxSessionTTL = teleRole.GetMaxSessionTTL().Duration
 	a.SSH.NodeLabels = teleRole.GetNodeLabels()
 	// FIXME: this is a workaround for #1623
@@ -84,7 +84,7 @@ func (a *RoleAccess) initSSH(teleRole teleservices.Role) {
 	a.SSH.Logins = filteredLogins
 }
 
-func (a *RoleAccess) initAdmin(teleRole teleservices.Role) {
+func (a *RoleAccess) initAdmin(teleRole teleservices.ServiceRole) {
 	hasAllNamespaces := teleservices.MatchNamespace(
 		teleRole.GetNamespaces(),
 		teleservices.Wildcard)
@@ -93,7 +93,7 @@ func (a *RoleAccess) initAdmin(teleRole teleservices.Role) {
 	a.Admin.Enabled = hasFullAccess(resources, adminResources) && hasAllNamespaces
 }
 
-func (a *RoleAccess) applyAdmin(teleRole teleservices.Role) {
+func (a *RoleAccess) applyAdmin(teleRole teleservices.ServiceRole) {
 	if a.Admin.Enabled {
 		allowAllNamespaces(teleRole)
 		applyResourceAccess(teleRole, adminResources, teleservices.RW())
@@ -103,7 +103,7 @@ func (a *RoleAccess) applyAdmin(teleRole teleservices.Role) {
 	}
 }
 
-func (a *RoleAccess) applySSH(teleRole teleservices.Role) {
+func (a *RoleAccess) applySSH(teleRole teleservices.ServiceRole) {
 	// FIXME: this is a workaround for #1623
 	if len(a.SSH.Logins) == 0 {
 		a.SSH.Logins = append(a.SSH.Logins, roleDefaultAllowedLogin)
@@ -118,7 +118,7 @@ func all() []string {
 	return []string{teleservices.Wildcard}
 }
 
-func allowAllNamespaces(teleRole teleservices.Role) {
+func allowAllNamespaces(teleRole teleservices.ServiceRole) {
 	newNamespaces := teleutils.Deduplicate(append(teleRole.GetNamespaces(), all()...))
 	teleRole.SetNamespaces(newNamespaces)
 }
@@ -147,7 +147,7 @@ func hasFullAccess(resources map[string][]string, kinds []string) bool {
 	return true
 }
 
-func applyResourceAccess(teleRole teleservices.Role, kinds []string, actions []string) {
+func applyResourceAccess(teleRole teleservices.ServiceRole, kinds []string, actions []string) {
 	for _, kind := range kinds {
 		teleRole.SetResource(kind, actions)
 	}

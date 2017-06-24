@@ -327,7 +327,7 @@ func (process *TeleportProcess) initAuthService(authority auth.Authority) error 
 		Identity:        cfg.Identity,
 		Access:          cfg.Access,
 		StaticTokens:    cfg.Auth.StaticTokens,
-		Roles:           cfg.Auth.Roles,
+		ServiceRoles:    cfg.Auth.ServiceRoles,
 		AuthPreference:  cfg.Auth.Preference,
 		OIDCConnectors:  cfg.OIDCConnectors,
 		U2F:             cfg.Auth.U2F,

@@ -127,11 +127,11 @@ auth_service:
 						"ssh_permissions",
 						"roles",
 					},
-					ClaimsToRoles: []ClaimMapping{
+					ClaimsToServiceRoles: []ClaimMapping{
 						ClaimMapping{
 							Claim: "role",
 							Value: "admin",
-							Roles: []string{
+							ServiceRoles: []string{
 								"dba",
 								"backup",
 								"root",
@@ -187,18 +187,18 @@ auth_service:
 					Scope: []string{
 						"roles",
 					},
-					ClaimsToRoles: []ClaimMapping{
+					ClaimsToServiceRoles: []ClaimMapping{
 						ClaimMapping{
 							Claim: "roles",
 							Value: "teleport-admin",
-							RoleTemplate: &services.RoleV2{
-								Kind:    services.KindRole,
+							ServiceRoleTemplate: &services.ServiceRoleV2{
+								Kind:    services.KindServiceRole,
 								Version: services.V2,
 								Metadata: services.Metadata{
 									Name:      `{{index . "email"}}`,
 									Namespace: defaults.Namespace,
 								},
-								Spec: services.RoleSpecV2{
+								Spec: services.ServiceRoleSpecV2{
 									MaxSessionTTL: services.NewDuration(90 * 60 * time.Minute),
 									Logins:        []string{`{{index . "nickname"}}`, `root`},
 									NodeLabels:    map[string]string{"*": "*"},

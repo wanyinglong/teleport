@@ -79,14 +79,14 @@ func (s *AuthServer) getSAMLProvider(conn services.SAMLConnector) (*saml2.SAMLSe
 	return serviceProvider, nil
 }
 
-// buildSAMLRoles takes a connector and claims and returns a slice of roles. If the claims
+// buildSAMLServiceRoles takes a connector and claims and returns a slice of roles. If the claims
 // match a concrete roles in the connector, those roles are returned directly. If the
 // claims match a template role in the connector, then that role is first created from
 // the template, then returned.
-func (a *AuthServer) buildSAMLRoles(connector services.SAMLConnector, assertionInfo saml2.AssertionInfo, expiresAt time.Time) ([]string, error) {
+func (a *AuthServer) buildSAMLServiceRoles(connector services.SAMLConnector, assertionInfo saml2.AssertionInfo, expiresAt time.Time) ([]string, error) {
 	roles := connector.MapAttributes(assertionInfo)
 	if len(roles) == 0 {
-		role, err := connector.RoleFromTemplate(assertionInfo)
+		role, err := connector.ServiceRoleFromTemplate(assertionInfo)
 		if err != nil {
 			log.Warningf("[SAML] Unable to map claims to roles or role templates for %q: %v", connector.GetName(), err)
 			return nil, trace.AccessDenied("unable to map claims to roles or role templates for %q: %v", connector.GetName(), err)
@@ -96,7 +96,7 @@ func (a *AuthServer) buildSAMLRoles(connector services.SAMLConnector, assertionI
 		ttl := expiresAt.Sub(a.clock.Now())
 
 		// upsert templated role
-		err = a.Access.UpsertRole(role, ttl)
+		err = a.Access.UpsertServiceRole(role, ttl)
 		if err != nil {
 			log.Warningf("[SAML] Unable to upsert templated role for connector: %q: %v", connector.GetName(), err)
 			return nil, trace.AccessDenied("unable to upsert templated role: %q: %v", connector.GetName(), err)
@@ -109,7 +109,7 @@ func (a *AuthServer) buildSAMLRoles(connector services.SAMLConnector, assertionI
 }
 
 func (a *AuthServer) createSAMLUser(connector services.SAMLConnector, assertionInfo saml2.AssertionInfo, expiresAt time.Time) error {
-	roles, err := a.buildSAMLRoles(connector, assertionInfo, expiresAt)
+	roles, err := a.buildSAMLServiceRoles(connector, assertionInfo, expiresAt)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -123,7 +123,7 @@ func (a *AuthServer) createSAMLUser(connector services.SAMLConnector, assertionI
 			Namespace: defaults.Namespace,
 		},
 		Spec: services.UserSpecV2{
-			Roles:          roles,
+			ServiceRoles:   roles,
 			Expires:        expiresAt,
 			SAMLIdentities: []services.ExternalIdentity{{ConnectorID: connector.GetName(), Username: assertionInfo.NameID}},
 			CreatedBy: services.CreatedBy{
@@ -262,8 +262,8 @@ func (a *AuthServer) ValidateSAMLResponse(samlResponse string) (*SAMLAuthRespons
 	}
 	log.Debugf("[SAML] Assertion Warnings: %+v", assertionInfo.WarningInfo)
 
-	log.Debugf("[SAML] Applying %v claims to roles mappings", len(connector.GetAttributesToRoles()))
-	if len(connector.GetAttributesToRoles()) == 0 {
+	log.Debugf("[SAML] Applying %v claims to roles mappings", len(connector.GetAttributesToServiceRoles()))
+	if len(connector.GetAttributesToServiceRoles()) == 0 {
 		return nil, trace.BadParameter("SAML does not support binding to local users")
 	}
 	// TODO(klizhentas) use SessionNotOnOrAfter to calculate expiration time
@@ -286,8 +286,8 @@ func (a *AuthServer) ValidateSAMLResponse(samlResponse string) (*SAMLAuthRespons
 		Username: user.GetName(),
 	}
 
-	var roles services.RoleSet
-	roles, err = services.FetchRoles(user.GetRoles(), a.Access)
+	var roles services.ServiceRoleSet
+	roles, err = services.FetchServiceRoles(user.GetServiceRoles(), a.Access)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}

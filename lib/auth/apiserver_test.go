@@ -119,22 +119,22 @@ func (s *APISuite) TearDownTest(c *C) {
 }
 
 type clt interface {
-	UpsertRole(services.Role, time.Duration) error
+	UpsertServiceRole(services.ServiceRole, time.Duration) error
 	UpsertUser(services.User) error
 }
 
-func createUserAndRole(clt clt, username string, allowedLogins []string) (services.User, services.Role) {
+func createUserAndRole(clt clt, username string, allowedLogins []string) (services.User, services.ServiceRole) {
 	user, err := services.NewUser(username)
 	if err != nil {
 		panic(err)
 	}
-	role := services.RoleForUser(user)
+	role := services.ServiceRoleForUser(user)
 	role.SetLogins([]string{user.GetName()})
-	err = clt.UpsertRole(role, backend.Forever)
+	err = clt.UpsertServiceRole(role, backend.Forever)
 	if err != nil {
 		panic(err)
 	}
-	user.AddRole(role.GetName())
+	user.AddServiceRole(role.GetName())
 	err = clt.UpsertUser(user)
 	if err != nil {
 		panic(err)
@@ -142,19 +142,19 @@ func createUserAndRole(clt clt, username string, allowedLogins []string) (servic
 	return user, role
 }
 
-func createUserAndRoleWithoutRoles(clt clt, username string, allowedLogins []string) (services.User, services.Role) {
+func createUserAndRoleWithoutRoles(clt clt, username string, allowedLogins []string) (services.User, services.ServiceRole) {
 	user, err := services.NewUser(username)
 	if err != nil {
 		panic(err)
 	}
-	role := services.RoleForUser(user)
-	role.RemoveResource(services.KindRole)
+	role := services.ServiceRoleForUser(user)
+	role.RemoveResource(services.KindServiceRole)
 	role.SetLogins([]string{user.GetName()})
-	err = clt.UpsertRole(role, backend.Forever)
+	err = clt.UpsertServiceRole(role, backend.Forever)
 	if err != nil {
 		panic(err)
 	}
-	user.AddRole(role.GetName())
+	user.AddServiceRole(role.GetName())
 	err = clt.UpsertUser(user)
 	if err != nil {
 		panic(err)
@@ -178,7 +178,7 @@ func (s *APISuite) TestReadOwnRole(c *C) {
 	authServer, userClient := s.newServerWithAuthorizer(c, authorizer)
 	defer authServer.Close()
 
-	_, err = userClient.GetRole(userRole.GetName())
+	_, err = userClient.GetServiceRole(userRole.GetName())
 	c.Assert(err, IsNil)
 
 	// user2 can't read user1 role
@@ -187,7 +187,7 @@ func (s *APISuite) TestReadOwnRole(c *C) {
 	authServer2, userClient2 := s.newServerWithAuthorizer(c, authorizer)
 	defer authServer2.Close()
 
-	_, err = userClient2.GetRole(userRole.GetName())
+	_, err = userClient2.GetServiceRole(userRole.GetName())
 	c.Assert(err, NotNil)
 }
 
@@ -270,7 +270,7 @@ func (s *APISuite) TestGenerateKeysAndCerts(c *C) {
 
 	// now update role to permit agent forwarding
 	userRole.SetForwardAgent(true)
-	err = s.clt.UpsertRole(userRole, backend.Forever)
+	err = s.clt.UpsertServiceRole(userRole, backend.Forever)
 	c.Assert(err, IsNil)
 
 	authorizer, err = NewUserAuthorizer("user1", s.WebS, s.AccessS)

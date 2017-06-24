@@ -397,7 +397,7 @@ func ApplyFileConfig(fc *FileConfig, cfg *service.Config) error {
 			return trace.Wrap(err)
 		}
 		cfg.Auth.Authorities = append(cfg.Auth.Authorities, ca)
-		cfg.Auth.Roles = append(cfg.Auth.Roles, role)
+		cfg.Auth.ServiceRoles = append(cfg.Auth.ServiceRoles, role)
 	}
 	for _, token := range fc.Auth.StaticTokens {
 		roles, tokenValue, err := token.Parse()
@@ -449,7 +449,7 @@ func ApplyFileConfig(fc *FileConfig, cfg *service.Config) error {
 
 // parseAuthorizedKeys parses keys in the authorized_keys format and
 // returns a services.CertAuthority.
-func parseAuthorizedKeys(bytes []byte, allowedLogins []string) (services.CertAuthority, services.Role, error) {
+func parseAuthorizedKeys(bytes []byte, allowedLogins []string) (services.CertAuthority, services.ServiceRole, error) {
 	pubkey, comment, _, _, err := ssh.ParseAuthorizedKey(bytes)
 	if err != nil {
 		return nil, nil, trace.Wrap(err)
@@ -473,16 +473,16 @@ func parseAuthorizedKeys(bytes []byte, allowedLogins []string) (services.CertAut
 		nil)
 
 	// transform old allowed logins into roles
-	role := services.RoleForCertAuthority(ca)
+	role := services.ServiceRoleForCertAuthority(ca)
 	role.SetLogins(allowedLogins)
-	ca.AddRole(role.GetName())
+	ca.AddServiceRole(role.GetName())
 
 	return ca, role, nil
 }
 
 // parseKnownHosts parses keys in known_hosts format and returns a
 // services.CertAuthority.
-func parseKnownHosts(bytes []byte, allowedLogins []string) (services.CertAuthority, services.Role, error) {
+func parseKnownHosts(bytes []byte, allowedLogins []string) (services.CertAuthority, services.ServiceRole, error) {
 	marker, options, pubKey, comment, _, err := ssh.ParseKnownHosts(bytes)
 	if marker != "cert-authority" {
 		return nil, nil, trace.BadParameter("invalid file format. expected '@cert-authority` marker")
@@ -530,7 +530,7 @@ func certificateAuthorityFormat(bytes []byte) (string, error) {
 
 // parseCAKey parses bytes either in known_hosts or authorized_keys format
 // and returns a services.CertAuthority.
-func parseCAKey(bytes []byte, allowedLogins []string) (services.CertAuthority, services.Role, error) {
+func parseCAKey(bytes []byte, allowedLogins []string) (services.CertAuthority, services.ServiceRole, error) {
 	caFormat, err := certificateAuthorityFormat(bytes)
 	if err != nil {
 		return nil, nil, trace.Wrap(err)
@@ -572,7 +572,7 @@ func readTrustedClusters(clusters []TrustedCluster, conf *service.Config) error 
 		defer f.Close()
 		// read the keyfile for this cluster and get trusted CA keys:
 		var authorities []services.CertAuthority
-		var roles []services.Role
+		var roles []services.ServiceRole
 		scanner := bufio.NewScanner(f)
 		for line := 0; scanner.Scan(); {
 			ca, role, err := parseCAKey(scanner.Bytes(), allowedLogins)
@@ -589,7 +589,7 @@ func readTrustedClusters(clusters []TrustedCluster, conf *service.Config) error 
 			}
 		}
 		conf.Auth.Authorities = append(conf.Auth.Authorities, authorities...)
-		conf.Auth.Roles = append(conf.Auth.Roles, roles...)
+		conf.Auth.ServiceRoles = append(conf.Auth.ServiceRoles, roles...)
 		clusterName := authorities[0].GetClusterName()
 		// parse "tunnel_addr"
 		var tunnelAddresses []string

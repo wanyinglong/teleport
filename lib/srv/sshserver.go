@@ -449,8 +449,8 @@ func (s *Server) getCommandLabels() map[string]services.CommandLabel {
 	return out
 }
 
-// extractRolesFromCert extracts roles from certificate metadata extensions
-func (s *Server) extractRolesFromCert(cert *ssh.Certificate) ([]string, error) {
+// extractServiceRolesFromCert extracts roles from certificate metadata extensions
+func (s *Server) extractServiceRolesFromCert(cert *ssh.Certificate) ([]string, error) {
 	data, ok := cert.Extensions[teleport.CertExtensionTeleportRoles]
 	if !ok {
 		// it's ok to not have any roles in the metadata
@@ -495,7 +495,7 @@ func (s *Server) checkPermissionToLogin(cert *ssh.Certificate, teleportUser, osU
 	}
 
 	// for local users, go and check their individual permissions
-	var roles services.RoleSet
+	var roles services.ServiceRoleSet
 	if domainName == ca.GetClusterName() {
 		users, err := s.authService.GetUsers()
 		if err != nil {
@@ -503,14 +503,14 @@ func (s *Server) checkPermissionToLogin(cert *ssh.Certificate, teleportUser, osU
 		}
 		for _, u := range users {
 			if u.GetName() == teleportUser {
-				roles, err = services.FetchRoles(u.GetRoles(), s.authService)
+				roles, err = services.FetchServiceRoles(u.GetServiceRoles(), s.authService)
 				if err != nil {
 					return "", trace.Wrap(err)
 				}
 			}
 		}
 	} else {
-		certRoles, err := s.extractRolesFromCert(cert)
+		certRoles, err := s.extractServiceRolesFromCert(cert)
 		if err != nil {
 			log.Errorf("failed to extract roles from cert: %v", err)
 			return "", trace.AccessDenied("failed to parse certificate roles")
@@ -520,7 +520,7 @@ func (s *Server) checkPermissionToLogin(cert *ssh.Certificate, teleportUser, osU
 			log.Errorf("failed to map roles %v", err)
 			return "", trace.AccessDenied("failed to map roles")
 		}
-		roles, err = services.FetchRoles(roleNames, s.authService)
+		roles, err = services.FetchServiceRoles(roleNames, s.authService)
 		if err != nil {
 			return "", trace.Wrap(err)
 		}
@@ -535,7 +535,7 @@ func (s *Server) checkPermissionToLogin(cert *ssh.Certificate, teleportUser, osU
 }
 
 // fetchRoleSet fretches role set for a given user
-func (s *Server) fetchRoleSet(teleportUser string, clusterName string) (services.RoleSet, error) {
+func (s *Server) fetchServiceRoleSet(teleportUser string, clusterName string) (services.ServiceRoleSet, error) {
 	localClusterName, err := s.authService.GetDomainName()
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -557,7 +557,7 @@ func (s *Server) fetchRoleSet(teleportUser string, clusterName string) (services
 		return nil, trace.NotFound("could not find certificate authority for cluster %v and user %v", clusterName, teleportUser)
 	}
 
-	var roles services.RoleSet
+	var roles services.ServiceRoleSet
 	if localClusterName == clusterName {
 		users, err := s.authService.GetUsers()
 		if err != nil {
@@ -565,14 +565,14 @@ func (s *Server) fetchRoleSet(teleportUser string, clusterName string) (services
 		}
 		for _, u := range users {
 			if u.GetName() == teleportUser {
-				roles, err = services.FetchRoles(u.GetRoles(), s.authService)
+				roles, err = services.FetchServiceRoles(u.GetServiceRoles(), s.authService)
 				if err != nil {
 					return nil, trace.Wrap(err)
 				}
 			}
 		}
 	} else {
-		roles, err = services.FetchRoles(ca.GetRoles(), s.authService)
+		roles, err = services.FetchServiceRoles(ca.GetServiceRoles(), s.authService)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
@@ -960,7 +960,7 @@ func (s *Server) dispatch(ch ssh.Channel, req *ssh.Request, ctx *ctx) error {
 }
 
 func (s *Server) handleAgentForward(ch ssh.Channel, req *ssh.Request, ctx *ctx) error {
-	roles, err := s.fetchRoleSet(ctx.teleportUser, ctx.clusterName)
+	roles, err := s.fetchServiceRoleSet(ctx.teleportUser, ctx.clusterName)
 	if err != nil {
 		return trace.Wrap(err)
 	}

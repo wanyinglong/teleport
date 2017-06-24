@@ -61,10 +61,10 @@ type TeleInstance struct {
 }
 
 type User struct {
-	Username      string          `json:"username"`
-	AllowedLogins []string        `json:"logins"`
-	Key           *client.Key     `json:"key"`
-	Roles         []services.Role `json:"-"`
+	Username      string                 `json:"username"`
+	AllowedLogins []string               `json:"logins"`
+	Key           *client.Key            `json:"key"`
+	ServiceRoles  []services.ServiceRole `json:"-"`
 }
 
 type InstanceSecrets struct {
@@ -131,14 +131,14 @@ func NewInstance(clusterName string, hostID string, nodeName string, ports []int
 	return i
 }
 
-// GetRoles returns a list of roles to initiate for this secret
-func (s *InstanceSecrets) GetRoles() []services.Role {
-	var roles []services.Role
+// GetServiceRoles returns a list of roles to initiate for this secret
+func (s *InstanceSecrets) GetServiceRoles() []services.ServiceRole {
+	var roles []services.ServiceRole
 	for _, ca := range s.GetCAs() {
 		if ca.GetType() != services.UserCA {
 			continue
 		}
-		role := services.RoleForCertAuthority(ca)
+		role := services.ServiceRoleForCertAuthority(ca)
 		role.SetLogins(s.AllowedLogins())
 		roles = append(roles, role)
 	}
@@ -151,7 +151,7 @@ func (s *InstanceSecrets) GetRoles() []services.Role {
 func (s *InstanceSecrets) GetCAs() []services.CertAuthority {
 	return []services.CertAuthority{
 		services.NewCertAuthority(services.HostCA, s.SiteName, [][]byte{s.PrivKey}, [][]byte{s.PubKey}, []string{}),
-		services.NewCertAuthority(services.UserCA, s.SiteName, [][]byte{s.PrivKey}, [][]byte{s.PubKey}, []string{services.RoleNameForCertAuthority(s.SiteName)}),
+		services.NewCertAuthority(services.UserCA, s.SiteName, [][]byte{s.PrivKey}, [][]byte{s.PubKey}, []string{services.ServiceRoleNameForCertAuthority(s.SiteName)}),
 	}
 }
 
@@ -163,7 +163,7 @@ func (s *InstanceSecrets) AllowedLogins() []string {
 	return logins
 }
 
-func (s *InstanceSecrets) AsTrustedCluster(token string, roleMap services.RoleMap) services.TrustedCluster {
+func (s *InstanceSecrets) AsTrustedCluster(token string, roleMap services.ServiceRoleMap) services.TrustedCluster {
 	return &services.TrustedClusterV2{
 		Kind:    services.KindTrustedCluster,
 		Version: services.V2,
@@ -175,7 +175,7 @@ func (s *InstanceSecrets) AsTrustedCluster(token string, roleMap services.RoleMa
 			Enabled:              true,
 			ProxyAddress:         s.WebProxyAddr,
 			ReverseTunnelAddress: s.ListenAddr,
-			RoleMap:              roleMap,
+			ServiceRoleMap:       roleMap,
 		},
 	}
 }
@@ -258,7 +258,7 @@ func (i *TeleInstance) CreateEx(trustedSecrets []*InstanceSecrets, tconf *servic
 	tconf.Identities = append(tconf.Identities, i.Secrets.GetIdentity())
 	for _, trusted := range trustedSecrets {
 		tconf.Auth.Authorities = append(tconf.Auth.Authorities, trusted.GetCAs()...)
-		tconf.Auth.Roles = append(tconf.Auth.Roles, trusted.GetRoles()...)
+		tconf.Auth.ServiceRoles = append(tconf.Auth.ServiceRoles, trusted.GetServiceRoles()...)
 		tconf.Identities = append(tconf.Identities, trusted.GetIdentity())
 		if trusted.ListenAddr != "" {
 			tconf.ReverseTunnels = []services.ReverseTunnel{
@@ -298,24 +298,24 @@ func (i *TeleInstance) CreateEx(trustedSecrets []*InstanceSecrets, tconf *servic
 		if err != nil {
 			return trace.Wrap(err)
 		}
-		var roles []services.Role
-		if len(user.Roles) == 0 {
-			role := services.RoleForUser(teleUser)
+		var roles []services.ServiceRole
+		if len(user.ServiceRoles) == 0 {
+			role := services.ServiceRoleForUser(teleUser)
 			role.SetLogins(user.AllowedLogins)
-			err = auth.UpsertRole(role, backend.Forever)
+			err = auth.UpsertServiceRole(role, backend.Forever)
 			if err != nil {
 				return trace.Wrap(err)
 			}
-			teleUser.AddRole(role.GetMetadata().Name)
+			teleUser.AddServiceRole(role.GetMetadata().Name)
 			roles = append(roles, role)
 		} else {
-			roles = user.Roles
-			for _, role := range user.Roles {
-				err := auth.UpsertRole(role, backend.Forever)
+			roles = user.ServiceRoles
+			for _, role := range user.ServiceRoles {
+				err := auth.UpsertServiceRole(role, backend.Forever)
 				if err != nil {
 					return trace.Wrap(err)
 				}
-				teleUser.AddRole(role.GetName())
+				teleUser.AddServiceRole(role.GetName())
 			}
 		}
 
@@ -333,7 +333,7 @@ func (i *TeleInstance) CreateEx(trustedSecrets []*InstanceSecrets, tconf *servic
 		}
 		// sign user's keys:
 		ttl := 24 * time.Hour
-		logins, err := services.RoleSet(roles).CheckLogins(ttl)
+		logins, err := services.ServiceRoleSet(roles).CheckLogins(ttl)
 		if err != nil {
 			return trace.Wrap(err)
 		}
@@ -389,10 +389,10 @@ func (i *TeleInstance) Reset() (err error) {
 }
 
 // AddUserUserWithRole adds user with assigned role
-func (i *TeleInstance) AddUserWithRole(username string, role services.Role) *User {
+func (i *TeleInstance) AddUserWithRole(username string, role services.ServiceRole) *User {
 	user := &User{
-		Username: username,
-		Roles:    []services.Role{role},
+		Username:     username,
+		ServiceRoles: []services.ServiceRole{role},
 	}
 	i.Secrets.Users[username] = user
 	return user

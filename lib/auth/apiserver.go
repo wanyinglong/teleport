@@ -137,10 +137,10 @@ func NewAPIServer(config *APIConfig) http.Handler {
 	srv.DELETE("/:version/namespaces/:namespace", srv.withAuth(srv.deleteNamespace))
 
 	// Roles
-	srv.POST("/:version/roles", srv.withAuth(srv.upsertRole))
-	srv.GET("/:version/roles", srv.withAuth(srv.getRoles))
-	srv.GET("/:version/roles/:role", srv.withAuth(srv.getRole))
-	srv.DELETE("/:version/roles/:role", srv.withAuth(srv.deleteRole))
+	srv.POST("/:version/roles", srv.withAuth(srv.upsertServiceRole))
+	srv.GET("/:version/roles", srv.withAuth(srv.getServiceRoles))
+	srv.GET("/:version/roles/:role", srv.withAuth(srv.getServiceRole))
+	srv.DELETE("/:version/roles/:role", srv.withAuth(srv.deleteServiceRole))
 
 	// cluster authentication preferences
 	srv.GET("/:version/authentication/preference", srv.withAuth(srv.getClusterAuthPreference))
@@ -1536,38 +1536,38 @@ type upsertRoleRawReq struct {
 	Role json.RawMessage `json:"role"`
 }
 
-func (s *APIServer) upsertRole(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+func (s *APIServer) upsertServiceRole(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
 	var req *upsertRoleRawReq
 	if err := httplib.ReadJSON(r, &req); err != nil {
 		return nil, trace.Wrap(err)
 	}
-	role, err := services.GetRoleMarshaler().UnmarshalRole(req.Role)
+	role, err := services.GetServiceRoleMarshaler().UnmarshalServiceRole(req.Role)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	err = auth.UpsertRole(role, backend.Forever)
+	err = auth.UpsertServiceRole(role, backend.Forever)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	return message(fmt.Sprintf("'%v' role upserted", role.GetName())), nil
+	return message(fmt.Sprintf("'%v' service role upserted", role.GetName())), nil
 }
 
-func (s *APIServer) getRole(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
-	role, err := auth.GetRole(p.ByName("role"))
+func (s *APIServer) getServiceRole(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+	role, err := auth.GetServiceRole(p.ByName("role"))
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	return rawMessage(services.GetRoleMarshaler().MarshalRole(role, services.WithVersion(version)))
+	return rawMessage(services.GetServiceRoleMarshaler().MarshalServiceRole(role, services.WithVersion(version)))
 }
 
-func (s *APIServer) getRoles(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
-	roles, err := auth.GetRoles()
+func (s *APIServer) getServiceRoles(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+	roles, err := auth.GetServiceRoles()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 	out := make([]json.RawMessage, len(roles))
 	for i, role := range roles {
-		raw, err := services.GetRoleMarshaler().MarshalRole(role, services.WithVersion(version))
+		raw, err := services.GetServiceRoleMarshaler().MarshalServiceRole(role, services.WithVersion(version))
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
@@ -1576,12 +1576,12 @@ func (s *APIServer) getRoles(auth ClientI, w http.ResponseWriter, r *http.Reques
 	return out, nil
 }
 
-func (s *APIServer) deleteRole(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+func (s *APIServer) deleteServiceRole(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
 	role := p.ByName("role")
-	if err := auth.DeleteRole(role); err != nil {
+	if err := auth.DeleteServiceRole(role); err != nil {
 		return nil, trace.Wrap(err)
 	}
-	return message(fmt.Sprintf("role '%v' deleted", role)), nil
+	return message(fmt.Sprintf("service role '%v' deleted", role)), nil
 }
 
 func (s *APIServer) getClusterAuthPreference(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {

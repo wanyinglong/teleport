@@ -123,7 +123,7 @@ func (a *authorizer) authorizeRemoteUser(u teleport.RemoteUser) (*AuthContext, e
 	if err != nil {
 		return nil, trace.AccessDenied("failed to map roles for remote user %v from cluster %v", u.Username, u.ClusterName)
 	}
-	checker, err := services.FetchRoles(roleNames, a.access)
+	checker, err := services.FetchServiceRoles(roleNames, a.access)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -149,17 +149,17 @@ func GetCheckerForBuiltinRole(role teleport.Role) (services.AccessChecker, error
 	case teleport.RoleAuth:
 		return services.FromSpec(
 			role.String(),
-			services.RoleSpecV2{
+			services.ServiceRoleSpecV2{
 				Namespaces: []string{services.Wildcard},
 				Resources: map[string][]string{
 					services.KindAuthServer: services.RW()},
 			})
 	case teleport.RoleProvisionToken:
-		return services.FromSpec(role.String(), services.RoleSpecV2{})
+		return services.FromSpec(role.String(), services.ServiceRoleSpecV2{})
 	case teleport.RoleNode:
 		return services.FromSpec(
 			role.String(),
-			services.RoleSpecV2{
+			services.ServiceRoleSpecV2{
 				Namespaces: []string{services.Wildcard},
 				Resources: map[string][]string{
 					services.KindNode:          services.RW(),
@@ -169,14 +169,14 @@ func GetCheckerForBuiltinRole(role teleport.Role) (services.AccessChecker, error
 					services.KindCertAuthority: services.RO(),
 					services.KindUser:          services.RO(),
 					services.KindNamespace:     services.RO(),
-					services.KindRole:          services.RO(),
+					services.KindServiceRole:   services.RO(),
 					services.KindAuthServer:    services.RO(),
 				},
 			})
 	case teleport.RoleProxy:
 		return services.FromSpec(
 			role.String(),
-			services.RoleSpecV2{
+			services.ServiceRoleSpecV2{
 				Namespaces: []string{services.Wildcard},
 				Resources: map[string][]string{
 					services.KindProxy:                 services.RW(),
@@ -192,7 +192,7 @@ func GetCheckerForBuiltinRole(role teleport.Role) (services.AccessChecker, error
 					services.KindReverseTunnel:         services.RO(),
 					services.KindCertAuthority:         services.RO(),
 					services.KindUser:                  services.RO(),
-					services.KindRole:                  services.RO(),
+					services.KindServiceRole:           services.RO(),
 					services.KindClusterAuthPreference: services.RO(),
 					services.KindUniversalSecondFactor: services.RO(),
 				},
@@ -200,14 +200,14 @@ func GetCheckerForBuiltinRole(role teleport.Role) (services.AccessChecker, error
 	case teleport.RoleWeb:
 		return services.FromSpec(
 			role.String(),
-			services.RoleSpecV2{
+			services.ServiceRoleSpecV2{
 				Namespaces: []string{services.Wildcard},
 				Resources: map[string][]string{
 					services.KindWebSession:     services.RW(),
 					services.KindSession:        services.RW(),
 					services.KindAuthServer:     services.RO(),
 					services.KindUser:           services.RO(),
-					services.KindRole:           services.RO(),
+					services.KindServiceRole:    services.RO(),
 					services.KindNamespace:      services.RO(),
 					services.KindTrustedCluster: services.RO(),
 				},
@@ -215,7 +215,7 @@ func GetCheckerForBuiltinRole(role teleport.Role) (services.AccessChecker, error
 	case teleport.RoleSignup:
 		return services.FromSpec(
 			role.String(),
-			services.RoleSpecV2{
+			services.ServiceRoleSpecV2{
 				Namespaces: []string{services.Wildcard},
 				Resources: map[string][]string{
 					services.KindAuthServer:            services.RO(),
@@ -225,7 +225,7 @@ func GetCheckerForBuiltinRole(role teleport.Role) (services.AccessChecker, error
 	case teleport.RoleAdmin:
 		return services.FromSpec(
 			role.String(),
-			services.RoleSpecV2{
+			services.ServiceRoleSpecV2{
 				MaxSessionTTL: services.MaxDuration(),
 				Logins:        []string{},
 				Namespaces:    []string{services.Wildcard},
@@ -237,7 +237,7 @@ func GetCheckerForBuiltinRole(role teleport.Role) (services.AccessChecker, error
 	case teleport.RoleNop:
 		return services.FromSpec(
 			role.String(),
-			services.RoleSpecV2{
+			services.ServiceRoleSpecV2{
 				Namespaces: []string{},
 				Resources:  map[string][]string{},
 			})
@@ -266,7 +266,7 @@ func contextForLocalUser(username string, identity services.Identity, access ser
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	checker, err := services.FetchRoles(user.GetRoles(), access)
+	checker, err := services.FetchServiceRoles(user.GetServiceRoles(), access)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}

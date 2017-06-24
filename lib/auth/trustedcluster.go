@@ -70,12 +70,12 @@ func (a *AuthServer) enableTrustedCluster(trustedCluster services.TrustedCluster
 
 		// add roles into user certificates
 		// ignore roles set locally by the cert authority
-		remoteCertAuthority.SetRoles(nil)
+		remoteCertAuthority.SetServiceRoles(nil)
 		if remoteCertAuthority.GetType() == services.UserCA {
-			for _, r := range trustedCluster.GetRoles() {
-				remoteCertAuthority.AddRole(r)
+			for _, r := range trustedCluster.GetServiceRoles() {
+				remoteCertAuthority.AddServiceRole(r)
 			}
-			remoteCertAuthority.SetRoleMap(trustedCluster.GetRoleMap())
+			remoteCertAuthority.SetServiceRoleMap(trustedCluster.GetServiceRoleMap())
 		}
 
 		err = a.UpsertCertAuthority(remoteCertAuthority)
