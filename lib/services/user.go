@@ -44,6 +44,10 @@ type User interface {
 	GetRawObject() interface{}
 	// WebSessionInfo returns web session information about user
 	WebSessionInfo(allowedLogins []string) interface{}
+	//
+	GetContext() map[string]string
+	//
+	SetContext(map[string]string)
 }
 
 // NewUser creates new empty user
@@ -224,6 +228,10 @@ type UserSpecV2 struct {
 
 	// Roles is a list of roles assigned to user
 	Roles []string `json:"roles,omitempty"`
+
+	// Context is key/value pairs that hold additional data about the user
+	// identity like OIDC claims and SAML assertions.
+	Context map[string]string
 
 	// Status is a login status of the user
 	Status LoginStatus `json:"status"`

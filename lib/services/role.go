@@ -885,6 +885,12 @@ func NewRoleSet(roles ...Role) RoleSet {
 // RoleSet is a set of roles that implements access control functionality
 type RoleSet []Role
 
+func (r RoleSet) ApplyContext(ctx map[string]string) {
+	for i := 0; i < len(r); i++ {
+		r[i] = r[i].ApplyContext(ctx)
+	}
+}
+
 // MatchRule tests if the resource name and verb are in a given list of rules.
 func MatchRule(rules map[string][]string, resource string, verb string) bool {
 	// empty selector matches nothing

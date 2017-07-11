@@ -507,6 +507,8 @@ func (s *Server) checkPermissionToLogin(cert *ssh.Certificate, teleportUser, osU
 				if err != nil {
 					return "", trace.Wrap(err)
 				}
+
+				roles.ApplyContext(u.GetContext())
 			}
 		}
 	} else {
