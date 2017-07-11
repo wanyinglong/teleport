@@ -166,6 +166,11 @@ type Role interface {
 	// Equals returns true if the roles are equal. Roles are equal if options and
 	// conditions match.
 	Equals(other Role) bool
+	// Clone returns a deep copy of a role.
+	Clone() Role
+	// ApplyContext takes a map of passed in key/value pairs and substitutes
+	// in values stored in applicable fields of role.
+	ApplyContext(map[string]string) error
 
 	// GetOptions gets role options.
 	GetOptions() RoleOptions
@@ -229,6 +234,88 @@ func (r *RoleV3) Equals(other Role) bool {
 	}
 
 	return true
+}
+
+// Clone returns a deep copy of a role.
+func (r *RoleV3) Clone() Role {
+	out := RoleV3{
+		Kind:    KindRole,
+		Version: V3,
+		Metadata: Metadata{
+			Name:      r.Metadata.Name,
+			Namespace: r.Metadata.Namespace,
+		},
+		Spec: RoleSpecV3{},
+	}
+	if r.Spec.Options {
+		r.Spec.Options = utils.CopyStringMapInterface(r.Spec.Options)
+	}
+	if r.Spec.Deny {
+		r.Spec.Deny = RoleConditions{
+			Logins:     utils.CopyStrings(r.Spec.Deny.Logins),
+			Namespaces: utils.CopyStrings(r.Spec.Deny.Namespaces),
+			NodeLabels: utils.CopyStringMap(r.Spec.Deny.NodeLabels),
+			Rules:      utils.CopyStringMapSlices(r.Spec.Deny.Rules),
+		}
+	}
+	if r.Spec.Allow {
+		r.Spec.Allow = RoleConditions{
+			Logins:     utils.CopyStrings(r.Spec.Allow.Logins),
+			Namespaces: utils.CopyStrings(r.Spec.Allow.Namespaces),
+			NodeLabels: utils.CopyStringMap(r.Spec.Allow.NodeLabels),
+			Rules:      utils.CopyStringMapSlices(r.Spec.Allow.Rules),
+		}
+	}
+	return &out
+}
+
+var templateVariable = regexp.MustCompile(`%ctx\.(?P<key>.*)%`)
+
+func applySubstitution(ctx map[string]string, template string) (string, error) {
+	// extract name of the context variable we are looking for. to understand why
+	// we are looking for it in match[1], from the documentation:
+	//
+	//   If 'Submatch' is present, the return value is a slice identifying the
+	//   successive submatches of the expression. Submatches are matches of
+	//   parenthesized subexpressions (also known as capturing groups) within the
+	//   regular expression, numbered from left to right in order of opening
+	//   parenthesis. Submatch 0 is the match of the entire expression, submatch 1
+	//   the match of the first parenthesized subexpression, and so on.
+	//
+	// See https://golang.org/pkg/regexp/ for more details.
+	match := templateVariable.FindStringSubmatch(template)
+	if len(match) != 2 {
+		return "", trace.NotFound("no template found: %v", template)
+	}
+	variableName := match[1]
+
+	// check if we have this variable within the context
+	contextValue, ok := ctx[variableName]
+	if !ok {
+		return "", trace.NotFound("variable %q not in context")
+	}
+
+	return contextValue, nil
+}
+
+// ApplyContext takes a map of passed in key/value pairs and substitutes
+// in values stored in applicable fields of role.
+func (r *RoleV3) ApplyContext(ctx map[string]string) (*RoleV3, error) {
+	out := r.Clone()
+
+	for _, condition := range []RoleConditionType{Allow, Deny} {
+		logins := out.GetLogins(condition)
+		for i := 0; i < len(logins); i++ {
+		}
+	}
+
+	//for i := 0; i < len(r
+	//for _, login := range r.Spec.Deny.Logins {
+	//	applySubstitution(ctx, login)
+	//}
+
+	//allowLogins := r.Spec.Allow.Logins
+	return nil, nil
 }
 
 // SetExpiry sets expiry time for the object.
@@ -599,161 +686,6 @@ type RoleV2 struct {
 	Spec RoleSpecV2 `json:"spec"`
 }
 
-//// Equals test roles for equality. Roles are considered equal if all resources,
-//// logins, namespaces, labels, and options match.
-//func (r *RoleV2) Equals(other Role) bool {
-//	return r.V3().Equals(other)
-//}
-//
-//// SetResource sets resource rule
-//func (r *RoleV2) SetResource(kind string, actions []string) {
-//	if r.Spec.Resources == nil {
-//		r.Spec.Resources = make(map[string][]string)
-//	}
-//	r.Spec.Resources[kind] = actions
-//}
-//
-//// RemoveResource deletes resource entry
-//func (r *RoleV2) RemoveResource(kind string) {
-//	delete(r.Spec.Resources, kind)
-//}
-//
-//// SetLogins sets logins for role
-//func (r *RoleV2) SetLogins(logins []string) {
-//	r.Spec.Logins = logins
-//}
-//
-//// SetNodeLabels sets node labels for role
-//func (r *RoleV2) SetNodeLabels(labels map[string]string) {
-//	r.Spec.NodeLabels = labels
-//}
-//
-//// SetMaxSessionTTL sets a maximum TTL for SSH or Web session
-//func (r *RoleV2) SetMaxSessionTTL(duration time.Duration) {
-//	r.Spec.MaxSessionTTL.Duration = duration
-//}
-//
-//// SetExpiry sets expiry time for the object
-//func (r *RoleV2) SetExpiry(expires time.Time) {
-//	r.Metadata.SetExpiry(expires)
-//}
-//
-//// Expires retuns object expiry setting
-//func (r *RoleV2) Expiry() time.Time {
-//	return r.Metadata.Expiry()
-//}
-//
-//// SetTTL sets Expires header using realtime clock
-//func (r *RoleV2) SetTTL(clock clockwork.Clock, ttl time.Duration) {
-//	r.Metadata.SetTTL(clock, ttl)
-//}
-//
-//// SetName is a shortcut for SetMetadata().Name
-//func (r *RoleV2) SetName(s string) {
-//	r.Metadata.Name = s
-//}
-//
-//// GetName returns role name and is a shortcut for GetMetadata().Name
-//func (r *RoleV2) GetName() string {
-//	return r.Metadata.Name
-//}
-//
-//// GetMetadata returns role metadata
-//func (r *RoleV2) GetMetadata() Metadata {
-//	return r.Metadata
-//}
-//
-//// GetMaxSessionTTL is a maximum SSH or Web session TTL
-//func (r *RoleV2) GetMaxSessionTTL() Duration {
-//	return r.Spec.MaxSessionTTL
-//}
-//
-//// GetLogins returns a list of linux logins allowed for this role
-//func (r *RoleV2) GetLogins() []string {
-//	return r.Spec.Logins
-//}
-//
-//// GetNodeLabels returns a list of matchign nodes this role has access to
-//func (r *RoleV2) GetNodeLabels() map[string]string {
-//	return r.Spec.NodeLabels
-//}
-//
-//// GetNamespaces returns a list of namespaces this role has access to
-//func (r *RoleV2) GetNamespaces() []string {
-//	return r.Spec.Namespaces
-//}
-//
-//// SetNamespaces sets a list of namespaces this role has access to
-//func (r *RoleV2) SetNamespaces(namespaces []string) {
-//	r.Spec.Namespaces = namespaces
-//}
-//
-//// GetResources returns access to resources
-//func (r *RoleV2) GetResources() map[string][]string {
-//	return r.Spec.Resources
-//}
-//
-//// CanForwardAgent returns true if this role is allowed
-//// to request agent forwarding
-//func (r *RoleV2) CanForwardAgent() bool {
-//	return r.Spec.ForwardAgent
-//}
-//
-//// SetForwardAgent sets forward agent property
-//func (r *RoleV2) SetForwardAgent(forwardAgent bool) {
-//	r.Spec.ForwardAgent = forwardAgent
-//}
-//
-//// Check checks validity of all parameters and sets defaults
-//func (r *RoleV2) CheckAndSetDefaults() error {
-//	// make sure we have defaults for all fields
-//	if r.Metadata.Name == "" {
-//		return trace.BadParameter("missing parameter Name")
-//	}
-//	if r.Metadata.Namespace == "" {
-//		r.Metadata.Namespace = defaults.Namespace
-//	}
-//	if r.Spec.MaxSessionTTL.Duration == 0 {
-//		r.Spec.MaxSessionTTL.Duration = defaults.MaxCertDuration
-//	}
-//	if r.Spec.MaxSessionTTL.Duration < defaults.MinCertDuration {
-//		return trace.BadParameter("maximum session TTL can not be less than")
-//	}
-//	if r.Spec.Namespaces == nil {
-//		r.Spec.Namespaces = []string{defaults.Namespace}
-//	}
-//	if r.Spec.NodeLabels == nil {
-//		r.Spec.NodeLabels = map[string]string{Wildcard: Wildcard}
-//	}
-//	if r.Spec.Resources == nil {
-//		r.Spec.Resources = map[string][]string{
-//			KindSession:       RO(),
-//			KindRole:          RO(),
-//			KindNode:          RO(),
-//			KindAuthServer:    RO(),
-//			KindReverseTunnel: RO(),
-//			KindCertAuthority: RO(),
-//		}
-//	}
-//
-//	// restrict wildcards
-//	for _, login := range r.Spec.Logins {
-//		if login == Wildcard {
-//			return trace.BadParameter("wildcard matcher is not allowed in logins")
-//		}
-//		if !cstrings.IsValidUnixUser(login) {
-//			return trace.BadParameter("'%v' is not a valid user name", login)
-//		}
-//	}
-//	for key, val := range r.Spec.NodeLabels {
-//		if key == Wildcard && val != Wildcard {
-//			return trace.BadParameter("selector *:<val> is not supported")
-//		}
-//	}
-//
-//	return nil
-//}
-
 func (r *RoleV2) V3() *RoleV3 {
 	role := &RoleV3{
 		Kind:     KindRole,
@@ -779,11 +711,6 @@ func (r *RoleV2) V3() *RoleV3 {
 
 	return role
 }
-
-//func (r *RoleV2) String() string {
-//	return fmt.Sprintf("Role(Name=%v,MaxSessionTTL=%v,Logins=%v,NodeLabels=%v,Namespaces=%v,Resources=%v,CanForwardAgent=%v)",
-//		r.GetName(), r.GetMaxSessionTTL(), r.GetLogins(), r.GetNodeLabels(), r.GetNamespaces(), r.GetResources(), r.CanForwardAgent())
-//}
 
 // RoleSpecV2 is role specification for RoleV2
 type RoleSpecV2 struct {
