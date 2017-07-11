@@ -59,8 +59,8 @@ type SAMLConnector interface {
 	GetAttributes() []string
 	// MapAttributes maps attributes to roles
 	MapAttributes(assertionInfo saml2.AssertionInfo) []string
-	// RoleFromTemplate creates a role from a template and claims.
-	RoleFromTemplate(assertionInfo saml2.AssertionInfo) (Role, error)
+	//// RoleFromTemplate creates a role from a template and claims.
+	//RoleFromTemplate(assertionInfo saml2.AssertionInfo) (Role, error)
 	// Check checks SAML connector for errors
 	CheckAndSetDefaults() error
 	// SetIssuer sets issuer
@@ -317,12 +317,12 @@ func (o *SAMLConnectorV2) Equals(other SAMLConnector) bool {
 		if a.Name != b.Name || a.Value != b.Value || !utils.StringSlicesEqual(a.Roles, b.Roles) {
 			return false
 		}
-		if (a.RoleTemplate != nil && b.RoleTemplate == nil) || (a.RoleTemplate == nil && b.RoleTemplate != nil) {
-			return false
-		}
-		if a.RoleTemplate != nil && !a.RoleTemplate.Equals(b.RoleTemplate.V3()) {
-			return false
-		}
+		//if (a.RoleTemplate != nil && b.RoleTemplate == nil) || (a.RoleTemplate == nil && b.RoleTemplate != nil) {
+		//	return false
+		//}
+		//if a.RoleTemplate != nil && !a.RoleTemplate.Equals(b.RoleTemplate.V3()) {
+		//	return false
+		//}
 	}
 	if o.GetSSO() != other.GetSSO() {
 		return false
@@ -479,50 +479,50 @@ func executeSAMLSliceTemplate(raw []string, assertion map[string]string) ([]stri
 	return sl, nil
 }
 
-// RoleFromTemplate creates a role from a template and claims.
-func (o *SAMLConnectorV2) RoleFromTemplate(assertionInfo saml2.AssertionInfo) (Role, error) {
-	assertionMap := buildAssertionMap(assertionInfo)
-	for _, mapping := range o.Spec.AttributesToRoles {
-		for assrName, assrValue := range assertionMap {
-			// match assertion name
-			if assrName != mapping.Name {
-				continue
-			}
-
-			// match assertion value
-			if assrValue != mapping.Value {
-				continue
-			}
-
-			// claim name and value match, if a role template exists, execute template
-			roleTemplate := mapping.RoleTemplate
-			if roleTemplate != nil {
-				// at the moment, only allow templating for role name and logins
-				executedName, err := executeSAMLStringTemplate(roleTemplate.GetName(), assertionMap)
-				if err != nil {
-					return nil, trace.Wrap(err)
-				}
-				executedLogins, err := executeSAMLSliceTemplate(roleTemplate.GetLogins(), assertionMap)
-				if err != nil {
-					return nil, trace.Wrap(err)
-				}
-
-				roleTemplate.SetName(executedName)
-				roleTemplate.SetLogins(executedLogins)
-
-				// check all fields and make sure we have have a valid role
-				err = roleTemplate.CheckAndSetDefaults()
-				if err != nil {
-					return nil, trace.Wrap(err)
-				}
-
-				return roleTemplate.V3(), nil
-			}
-		}
-	}
-
-	return nil, trace.BadParameter("no matching assertion name/value, assertions: %q", assertionMap)
-}
+//// RoleFromTemplate creates a role from a template and claims.
+//func (o *SAMLConnectorV2) RoleFromTemplate(assertionInfo saml2.AssertionInfo) (Role, error) {
+//	assertionMap := buildAssertionMap(assertionInfo)
+//	for _, mapping := range o.Spec.AttributesToRoles {
+//		for assrName, assrValue := range assertionMap {
+//			// match assertion name
+//			if assrName != mapping.Name {
+//				continue
+//			}
+//
+//			// match assertion value
+//			if assrValue != mapping.Value {
+//				continue
+//			}
+//
+//			// claim name and value match, if a role template exists, execute template
+//			roleTemplate := mapping.RoleTemplate
+//			if roleTemplate != nil {
+//				// at the moment, only allow templating for role name and logins
+//				executedName, err := executeSAMLStringTemplate(roleTemplate.GetName(), assertionMap)
+//				if err != nil {
+//					return nil, trace.Wrap(err)
+//				}
+//				executedLogins, err := executeSAMLSliceTemplate(roleTemplate.GetLogins(), assertionMap)
+//				if err != nil {
+//					return nil, trace.Wrap(err)
+//				}
+//
+//				roleTemplate.SetName(executedName)
+//				roleTemplate.SetLogins(executedLogins)
+//
+//				// check all fields and make sure we have have a valid role
+//				err = roleTemplate.CheckAndSetDefaults()
+//				if err != nil {
+//					return nil, trace.Wrap(err)
+//				}
+//
+//				return roleTemplate.V3(), nil
+//			}
+//		}
+//	}
+//
+//	return nil, trace.BadParameter("no matching assertion name/value, assertions: %q", assertionMap)
+//}
 
 // GetServiceProvider initialises service provider spec from settings
 func (o *SAMLConnectorV2) GetServiceProvider(clock clockwork.Clock) (*saml2.SAMLServiceProvider, error) {

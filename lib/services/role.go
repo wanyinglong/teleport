@@ -599,160 +599,160 @@ type RoleV2 struct {
 	Spec RoleSpecV2 `json:"spec"`
 }
 
-// Equals test roles for equality. Roles are considered equal if all resources,
-// logins, namespaces, labels, and options match.
-func (r *RoleV2) Equals(other Role) bool {
-	return r.V3().Equals(other)
-}
-
-// SetResource sets resource rule
-func (r *RoleV2) SetResource(kind string, actions []string) {
-	if r.Spec.Resources == nil {
-		r.Spec.Resources = make(map[string][]string)
-	}
-	r.Spec.Resources[kind] = actions
-}
-
-// RemoveResource deletes resource entry
-func (r *RoleV2) RemoveResource(kind string) {
-	delete(r.Spec.Resources, kind)
-}
-
-// SetLogins sets logins for role
-func (r *RoleV2) SetLogins(logins []string) {
-	r.Spec.Logins = logins
-}
-
-// SetNodeLabels sets node labels for role
-func (r *RoleV2) SetNodeLabels(labels map[string]string) {
-	r.Spec.NodeLabels = labels
-}
-
-// SetMaxSessionTTL sets a maximum TTL for SSH or Web session
-func (r *RoleV2) SetMaxSessionTTL(duration time.Duration) {
-	r.Spec.MaxSessionTTL.Duration = duration
-}
-
-// SetExpiry sets expiry time for the object
-func (r *RoleV2) SetExpiry(expires time.Time) {
-	r.Metadata.SetExpiry(expires)
-}
-
-// Expires retuns object expiry setting
-func (r *RoleV2) Expiry() time.Time {
-	return r.Metadata.Expiry()
-}
-
-// SetTTL sets Expires header using realtime clock
-func (r *RoleV2) SetTTL(clock clockwork.Clock, ttl time.Duration) {
-	r.Metadata.SetTTL(clock, ttl)
-}
-
-// SetName is a shortcut for SetMetadata().Name
-func (r *RoleV2) SetName(s string) {
-	r.Metadata.Name = s
-}
-
-// GetName returns role name and is a shortcut for GetMetadata().Name
-func (r *RoleV2) GetName() string {
-	return r.Metadata.Name
-}
-
-// GetMetadata returns role metadata
-func (r *RoleV2) GetMetadata() Metadata {
-	return r.Metadata
-}
-
-// GetMaxSessionTTL is a maximum SSH or Web session TTL
-func (r *RoleV2) GetMaxSessionTTL() Duration {
-	return r.Spec.MaxSessionTTL
-}
-
-// GetLogins returns a list of linux logins allowed for this role
-func (r *RoleV2) GetLogins() []string {
-	return r.Spec.Logins
-}
-
-// GetNodeLabels returns a list of matchign nodes this role has access to
-func (r *RoleV2) GetNodeLabels() map[string]string {
-	return r.Spec.NodeLabels
-}
-
-// GetNamespaces returns a list of namespaces this role has access to
-func (r *RoleV2) GetNamespaces() []string {
-	return r.Spec.Namespaces
-}
-
-// SetNamespaces sets a list of namespaces this role has access to
-func (r *RoleV2) SetNamespaces(namespaces []string) {
-	r.Spec.Namespaces = namespaces
-}
-
-// GetResources returns access to resources
-func (r *RoleV2) GetResources() map[string][]string {
-	return r.Spec.Resources
-}
-
-// CanForwardAgent returns true if this role is allowed
-// to request agent forwarding
-func (r *RoleV2) CanForwardAgent() bool {
-	return r.Spec.ForwardAgent
-}
-
-// SetForwardAgent sets forward agent property
-func (r *RoleV2) SetForwardAgent(forwardAgent bool) {
-	r.Spec.ForwardAgent = forwardAgent
-}
-
-// Check checks validity of all parameters and sets defaults
-func (r *RoleV2) CheckAndSetDefaults() error {
-	// make sure we have defaults for all fields
-	if r.Metadata.Name == "" {
-		return trace.BadParameter("missing parameter Name")
-	}
-	if r.Metadata.Namespace == "" {
-		r.Metadata.Namespace = defaults.Namespace
-	}
-	if r.Spec.MaxSessionTTL.Duration == 0 {
-		r.Spec.MaxSessionTTL.Duration = defaults.MaxCertDuration
-	}
-	if r.Spec.MaxSessionTTL.Duration < defaults.MinCertDuration {
-		return trace.BadParameter("maximum session TTL can not be less than")
-	}
-	if r.Spec.Namespaces == nil {
-		r.Spec.Namespaces = []string{defaults.Namespace}
-	}
-	if r.Spec.NodeLabels == nil {
-		r.Spec.NodeLabels = map[string]string{Wildcard: Wildcard}
-	}
-	if r.Spec.Resources == nil {
-		r.Spec.Resources = map[string][]string{
-			KindSession:       RO(),
-			KindRole:          RO(),
-			KindNode:          RO(),
-			KindAuthServer:    RO(),
-			KindReverseTunnel: RO(),
-			KindCertAuthority: RO(),
-		}
-	}
-
-	// restrict wildcards
-	for _, login := range r.Spec.Logins {
-		if login == Wildcard {
-			return trace.BadParameter("wildcard matcher is not allowed in logins")
-		}
-		if !cstrings.IsValidUnixUser(login) {
-			return trace.BadParameter("'%v' is not a valid user name", login)
-		}
-	}
-	for key, val := range r.Spec.NodeLabels {
-		if key == Wildcard && val != Wildcard {
-			return trace.BadParameter("selector *:<val> is not supported")
-		}
-	}
-
-	return nil
-}
+//// Equals test roles for equality. Roles are considered equal if all resources,
+//// logins, namespaces, labels, and options match.
+//func (r *RoleV2) Equals(other Role) bool {
+//	return r.V3().Equals(other)
+//}
+//
+//// SetResource sets resource rule
+//func (r *RoleV2) SetResource(kind string, actions []string) {
+//	if r.Spec.Resources == nil {
+//		r.Spec.Resources = make(map[string][]string)
+//	}
+//	r.Spec.Resources[kind] = actions
+//}
+//
+//// RemoveResource deletes resource entry
+//func (r *RoleV2) RemoveResource(kind string) {
+//	delete(r.Spec.Resources, kind)
+//}
+//
+//// SetLogins sets logins for role
+//func (r *RoleV2) SetLogins(logins []string) {
+//	r.Spec.Logins = logins
+//}
+//
+//// SetNodeLabels sets node labels for role
+//func (r *RoleV2) SetNodeLabels(labels map[string]string) {
+//	r.Spec.NodeLabels = labels
+//}
+//
+//// SetMaxSessionTTL sets a maximum TTL for SSH or Web session
+//func (r *RoleV2) SetMaxSessionTTL(duration time.Duration) {
+//	r.Spec.MaxSessionTTL.Duration = duration
+//}
+//
+//// SetExpiry sets expiry time for the object
+//func (r *RoleV2) SetExpiry(expires time.Time) {
+//	r.Metadata.SetExpiry(expires)
+//}
+//
+//// Expires retuns object expiry setting
+//func (r *RoleV2) Expiry() time.Time {
+//	return r.Metadata.Expiry()
+//}
+//
+//// SetTTL sets Expires header using realtime clock
+//func (r *RoleV2) SetTTL(clock clockwork.Clock, ttl time.Duration) {
+//	r.Metadata.SetTTL(clock, ttl)
+//}
+//
+//// SetName is a shortcut for SetMetadata().Name
+//func (r *RoleV2) SetName(s string) {
+//	r.Metadata.Name = s
+//}
+//
+//// GetName returns role name and is a shortcut for GetMetadata().Name
+//func (r *RoleV2) GetName() string {
+//	return r.Metadata.Name
+//}
+//
+//// GetMetadata returns role metadata
+//func (r *RoleV2) GetMetadata() Metadata {
+//	return r.Metadata
+//}
+//
+//// GetMaxSessionTTL is a maximum SSH or Web session TTL
+//func (r *RoleV2) GetMaxSessionTTL() Duration {
+//	return r.Spec.MaxSessionTTL
+//}
+//
+//// GetLogins returns a list of linux logins allowed for this role
+//func (r *RoleV2) GetLogins() []string {
+//	return r.Spec.Logins
+//}
+//
+//// GetNodeLabels returns a list of matchign nodes this role has access to
+//func (r *RoleV2) GetNodeLabels() map[string]string {
+//	return r.Spec.NodeLabels
+//}
+//
+//// GetNamespaces returns a list of namespaces this role has access to
+//func (r *RoleV2) GetNamespaces() []string {
+//	return r.Spec.Namespaces
+//}
+//
+//// SetNamespaces sets a list of namespaces this role has access to
+//func (r *RoleV2) SetNamespaces(namespaces []string) {
+//	r.Spec.Namespaces = namespaces
+//}
+//
+//// GetResources returns access to resources
+//func (r *RoleV2) GetResources() map[string][]string {
+//	return r.Spec.Resources
+//}
+//
+//// CanForwardAgent returns true if this role is allowed
+//// to request agent forwarding
+//func (r *RoleV2) CanForwardAgent() bool {
+//	return r.Spec.ForwardAgent
+//}
+//
+//// SetForwardAgent sets forward agent property
+//func (r *RoleV2) SetForwardAgent(forwardAgent bool) {
+//	r.Spec.ForwardAgent = forwardAgent
+//}
+//
+//// Check checks validity of all parameters and sets defaults
+//func (r *RoleV2) CheckAndSetDefaults() error {
+//	// make sure we have defaults for all fields
+//	if r.Metadata.Name == "" {
+//		return trace.BadParameter("missing parameter Name")
+//	}
+//	if r.Metadata.Namespace == "" {
+//		r.Metadata.Namespace = defaults.Namespace
+//	}
+//	if r.Spec.MaxSessionTTL.Duration == 0 {
+//		r.Spec.MaxSessionTTL.Duration = defaults.MaxCertDuration
+//	}
+//	if r.Spec.MaxSessionTTL.Duration < defaults.MinCertDuration {
+//		return trace.BadParameter("maximum session TTL can not be less than")
+//	}
+//	if r.Spec.Namespaces == nil {
+//		r.Spec.Namespaces = []string{defaults.Namespace}
+//	}
+//	if r.Spec.NodeLabels == nil {
+//		r.Spec.NodeLabels = map[string]string{Wildcard: Wildcard}
+//	}
+//	if r.Spec.Resources == nil {
+//		r.Spec.Resources = map[string][]string{
+//			KindSession:       RO(),
+//			KindRole:          RO(),
+//			KindNode:          RO(),
+//			KindAuthServer:    RO(),
+//			KindReverseTunnel: RO(),
+//			KindCertAuthority: RO(),
+//		}
+//	}
+//
+//	// restrict wildcards
+//	for _, login := range r.Spec.Logins {
+//		if login == Wildcard {
+//			return trace.BadParameter("wildcard matcher is not allowed in logins")
+//		}
+//		if !cstrings.IsValidUnixUser(login) {
+//			return trace.BadParameter("'%v' is not a valid user name", login)
+//		}
+//	}
+//	for key, val := range r.Spec.NodeLabels {
+//		if key == Wildcard && val != Wildcard {
+//			return trace.BadParameter("selector *:<val> is not supported")
+//		}
+//	}
+//
+//	return nil
+//}
 
 func (r *RoleV2) V3() *RoleV3 {
 	role := &RoleV3{
@@ -761,29 +761,29 @@ func (r *RoleV2) V3() *RoleV3 {
 		Metadata: r.Metadata,
 		Spec: RoleSpecV3{
 			Options: RoleOptions{
-				MaxSessionTTL: r.GetMaxSessionTTL(),
+				MaxSessionTTL: r.Spec.MaxSessionTTL,
 			},
 			Allow: RoleConditions{
-				Logins:     r.GetLogins(),
-				Namespaces: r.GetNamespaces(),
-				NodeLabels: r.GetNodeLabels(),
-				Rules:      r.GetResources(),
+				Logins:     r.Spec.Logins,
+				Namespaces: r.Spec.Namespaces,
+				NodeLabels: r.Spec.NodeLabels,
+				Rules:      r.Spec.Resources,
 			},
 		},
 	}
 
 	// translate old v2 agent forwarding to a v3 option
-	if r.CanForwardAgent() {
+	if r.Spec.ForwardAgent {
 		role.Spec.Options[ForwardAgent] = true
 	}
 
 	return role
 }
 
-func (r *RoleV2) String() string {
-	return fmt.Sprintf("Role(Name=%v,MaxSessionTTL=%v,Logins=%v,NodeLabels=%v,Namespaces=%v,Resources=%v,CanForwardAgent=%v)",
-		r.GetName(), r.GetMaxSessionTTL(), r.GetLogins(), r.GetNodeLabels(), r.GetNamespaces(), r.GetResources(), r.CanForwardAgent())
-}
+//func (r *RoleV2) String() string {
+//	return fmt.Sprintf("Role(Name=%v,MaxSessionTTL=%v,Logins=%v,NodeLabels=%v,Namespaces=%v,Resources=%v,CanForwardAgent=%v)",
+//		r.GetName(), r.GetMaxSessionTTL(), r.GetLogins(), r.GetNodeLabels(), r.GetNamespaces(), r.GetResources(), r.CanForwardAgent())
+//}
 
 // RoleSpecV2 is role specification for RoleV2
 type RoleSpecV2 struct {

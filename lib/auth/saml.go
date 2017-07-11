@@ -85,25 +85,25 @@ func (s *AuthServer) getSAMLProvider(conn services.SAMLConnector) (*saml2.SAMLSe
 // the template, then returned.
 func (a *AuthServer) buildSAMLRoles(connector services.SAMLConnector, assertionInfo saml2.AssertionInfo, expiresAt time.Time) ([]string, error) {
 	roles := connector.MapAttributes(assertionInfo)
-	if len(roles) == 0 {
-		role, err := connector.RoleFromTemplate(assertionInfo)
-		if err != nil {
-			log.Warningf("[SAML] Unable to map claims to roles or role templates for %q: %v", connector.GetName(), err)
-			return nil, trace.AccessDenied("unable to map claims to roles or role templates for %q: %v", connector.GetName(), err)
-		}
+	//if len(roles) == 0 {
+	//	role, err := connector.RoleFromTemplate(assertionInfo)
+	//	if err != nil {
+	//		log.Warningf("[SAML] Unable to map claims to roles or role templates for %q: %v", connector.GetName(), err)
+	//		return nil, trace.AccessDenied("unable to map claims to roles or role templates for %q: %v", connector.GetName(), err)
+	//	}
 
-		// figure out ttl for role. expires = now + ttl  =>  ttl = expires - now
-		ttl := expiresAt.Sub(a.clock.Now())
+	//	// figure out ttl for role. expires = now + ttl  =>  ttl = expires - now
+	//	ttl := expiresAt.Sub(a.clock.Now())
 
-		// upsert templated role
-		err = a.Access.UpsertRole(role, ttl)
-		if err != nil {
-			log.Warningf("[SAML] Unable to upsert templated role for connector: %q: %v", connector.GetName(), err)
-			return nil, trace.AccessDenied("unable to upsert templated role: %q: %v", connector.GetName(), err)
-		}
+	//	// upsert templated role
+	//	err = a.Access.UpsertRole(role, ttl)
+	//	if err != nil {
+	//		log.Warningf("[SAML] Unable to upsert templated role for connector: %q: %v", connector.GetName(), err)
+	//		return nil, trace.AccessDenied("unable to upsert templated role: %q: %v", connector.GetName(), err)
+	//	}
 
-		roles = []string{role.GetName()}
-	}
+	//	roles = []string{role.GetName()}
+	//}
 
 	return roles, nil
 }
