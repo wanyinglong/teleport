@@ -190,7 +190,7 @@ func (a *AuthServer) ValidateOIDCAuthCallback(q url.Values) (*OIDCAuthResponse, 
 	response.Username = user.GetName()
 
 	var roles services.RoleSet
-	roles, err = services.FetchRoles(user.GetRoles(), a.Access)
+	roles, err = services.FetchRoles(user.GetRoles(), a.Access, user.GetContext())
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -254,42 +254,32 @@ type OIDCAuthResponse struct {
 	HostSigners []services.CertAuthority `json:"host_signers"`
 }
 
-// buildRoles takes a connector and claims and returns a slice of roles. If the claims
-// match a concrete roles in the connector, those roles are returned directly. If the
-// claims match a template role in the connector, then that role is first created from
-// the template, then returned.
-func (a *AuthServer) buildRoles(connector services.OIDCConnector, ident *oidc.Identity, claims jose.Claims) ([]string, error) {
-	roles := connector.MapClaims(claims)
-	if len(roles) == 0 {
-		role, err := connector.RoleFromTemplate(claims)
-		if err != nil {
-			log.Warningf("[OIDC] Unable to map claims to roles or role templates for %q: %v", connector.GetName(), err)
-			return nil, trace.AccessDenied("unable to map claims to roles or role templates for %q: %v", connector.GetName(), err)
+// contextFromClaims extracts all string claims and creates a user context
+// item that will be used to build a role.
+func contextFromClaims(claims jose.Claims) map[string]string {
+	context := make(map[string]string)
+
+	for claimName := range claims {
+		claimValue, ok, _ := claims.StringClaim(claimName)
+		if ok {
+			context[claimName] = claimValue
 		}
-
-		// figure out ttl for role. expires = now + ttl  =>  ttl = expires - now
-		ttl := ident.ExpiresAt.Sub(a.clock.Now())
-
-		// upsert templated role
-		err = a.Access.UpsertRole(role, ttl)
-		if err != nil {
-			log.Warningf("[OIDC] Unable to upsert templated role for connector: %q: %v", connector.GetName(), err)
-			return nil, trace.AccessDenied("unable to upsert templated role: %q: %v", connector.GetName(), err)
+		claimValues, ok, _ := claims.StringsClaim(claimName)
+		if ok {
+			for _, claimValue := range claimValues {
+				context[claimName] = claimValue
+			}
 		}
-
-		roles = []string{role.GetName()}
 	}
 
-	return roles, nil
+	return context
 }
 
 func (a *AuthServer) createOIDCUser(connector services.OIDCConnector, ident *oidc.Identity, claims jose.Claims) error {
-	roles, err := a.buildRoles(connector, ident, claims)
-	if err != nil {
-		return trace.Wrap(err)
-	}
+	roles := connector.MapClaims(claims)
+	context := contextFromClaims(claims)
 
-	log.Debugf("[IDENTITY] %v/%v is a dynamic identity, generating user with roles: %v", connector.GetName(), ident.Email, roles)
+	log.Debugf("[IDENTITY] %v/%v is a dynamic identity, generating user with context: %v", connector.GetName(), ident.Email, context)
 	user, err := services.GetUserMarshaler().GenerateUser(&services.UserV2{
 		Kind:    services.KindUser,
 		Version: services.V2,
@@ -299,6 +289,7 @@ func (a *AuthServer) createOIDCUser(connector services.OIDCConnector, ident *oid
 		},
 		Spec: services.UserSpecV2{
 			Roles:          roles,
+			Context:        context,
 			Expires:        ident.ExpiresAt,
 			OIDCIdentities: []services.ExternalIdentity{{ConnectorID: connector.GetName(), Username: ident.Email}},
 			CreatedBy: services.CreatedBy{

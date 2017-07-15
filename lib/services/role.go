@@ -19,6 +19,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -167,6 +168,12 @@ type Role interface {
 	// Equals returns true if the roles are equal. Roles are equal if options and
 	// conditions match.
 	Equals(other Role) bool
+	// Clone returns a deep copy of a role.
+	Clone() Role
+	// ApplyContext makes a deep copy of the role and applies the passed in
+	// context to any variables in the list of logins and returns the deep copy
+	// of the role.
+	ApplyContext(map[string]string) Role
 	// GetRawObject returns the raw object stored in the backend without any
 	// conversions applied, used in migrations.
 	GetRawObject() interface{}
@@ -244,6 +251,97 @@ func (r *RoleV3) Equals(other Role) bool {
 	}
 
 	return true
+}
+
+// Clone returns a deep copy of a role.
+func (r *RoleV3) Clone() Role {
+	return &RoleV3{
+		Kind:    KindRole,
+		Version: V3,
+		Metadata: Metadata{
+			Name:      r.Metadata.Name,
+			Namespace: r.Metadata.Namespace,
+		},
+		Spec: RoleSpecV3{
+			Options: utils.CopyStringMapInterface(r.Spec.Options),
+			Deny: RoleConditions{
+				Logins:          utils.CopyStrings(r.Spec.Deny.Logins),
+				Namespaces:      utils.CopyStrings(r.Spec.Deny.Namespaces),
+				NodeLabels:      utils.CopyStringMap(r.Spec.Deny.NodeLabels),
+				Rules:           utils.CopyStringMapSlices(r.Spec.Deny.Rules),
+				SystemResources: utils.CopyStringMapSlices(r.Spec.Deny.SystemResources),
+			},
+			Allow: RoleConditions{
+				Logins:          utils.CopyStrings(r.Spec.Allow.Logins),
+				Namespaces:      utils.CopyStrings(r.Spec.Allow.Namespaces),
+				NodeLabels:      utils.CopyStringMap(r.Spec.Allow.NodeLabels),
+				Rules:           utils.CopyStringMapSlices(r.Spec.Allow.Rules),
+				SystemResources: utils.CopyStringMapSlices(r.Spec.Allow.SystemResources),
+			},
+		},
+	}
+}
+
+var variablePattern = regexp.MustCompile(`%ctx\.(?P<key>.*)%`)
+
+// isVariable checks if the passed in string matches the variable pattern
+// %ctx.variable_name%. If it does, it returns the name, in the previous
+// example that would be "variable_name". If no variable pattern is found,
+// trace.NotFound is returned.
+func isVariable(variable string) (string, error) {
+	// extract name of the context variable we are looking for. to understand why
+	// we are looking for it in match[1], from the documentation:
+	//
+	//   If 'Submatch' is present, the return value is a slice identifying the
+	//   successive submatches of the expression. Submatches are matches of
+	//   parenthesized subexpressions (also known as capturing groups) within the
+	//   regular expression, numbered from left to right in order of opening
+	//   parenthesis. Submatch 0 is the match of the entire expression, submatch 1
+	//   the match of the first parenthesized subexpression, and so on.
+	//
+	// See https://golang.org/pkg/regexp/ for more details.
+	match := variablePattern.FindStringSubmatch(variable)
+	if len(match) != 2 {
+		return "", trace.NotFound("no variable found: %v", variable)
+	}
+
+	return match[1], nil
+}
+
+// ApplyContext makes a deep copy of the role and applies the passed in
+// context to any variables in the list of logins and returns the deep copy
+// of the role.
+func (r *RoleV3) ApplyContext(ctx map[string]string) Role {
+	out := r.Clone()
+
+	for _, condition := range []RoleConditionType{Allow, Deny} {
+		inLogins := out.GetLogins(condition)
+
+		var outLogins []string
+		for _, login := range inLogins {
+			variableName, err := isVariable(login)
+
+			// if we didn't find a variable (found a normal login) then append it and
+			// go on to the next login
+			if trace.IsNotFound(err) {
+				outLogins = append(outLogins, login)
+				continue
+			}
+
+			// if we can't find the variable in the context, skip it
+			variableValue, ok := ctx[variableName]
+			if !ok {
+				continue
+			}
+
+			// we found the variable in the context, append it to the list of logins
+			outLogins = append(outLogins, variableValue)
+		}
+
+		out.SetLogins(condition, outLogins)
+	}
+
+	return out
 }
 
 // GetRawObject returns the raw object stored in the backend without any
@@ -911,15 +1009,16 @@ type RoleGetter interface {
 	GetRole(name string) (Role, error)
 }
 
-// FetchRoles fetches roles by their names and returns role set
-func FetchRoles(roleNames []string, access RoleGetter) (RoleSet, error) {
+// FetchRoles fetches roles by their names, applies the context to role
+// variables, and returns the RoleSet.
+func FetchRoles(roleNames []string, access RoleGetter, context map[string]string) (RoleSet, error) {
 	var roles RoleSet
 	for _, roleName := range roleNames {
 		role, err := access.GetRole(roleName)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
-		roles = append(roles, role)
+		roles = append(roles, role.ApplyContext(context))
 	}
 	return roles, nil
 }

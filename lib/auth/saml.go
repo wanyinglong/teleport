@@ -287,7 +287,7 @@ func (a *AuthServer) ValidateSAMLResponse(samlResponse string) (*SAMLAuthRespons
 	}
 
 	var roles services.RoleSet
-	roles, err = services.FetchRoles(user.GetRoles(), a.Access)
+	roles, err = services.FetchRoles(user.GetRoles(), a.Access, user.GetContext())
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}

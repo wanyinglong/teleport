@@ -648,7 +648,8 @@ func (s *AuthServer) NewWebSession(userName string) (services.WebSession, error)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
-		roles = append(roles, role)
+		roleWithContext := role.ApplyContext(user.GetContext())
+		roles = append(roles, roleWithContext)
 	}
 	sessionTTL := roles.AdjustSessionTTL(defaults.CertDuration)
 	bearerTokenTTL := utils.MinTTL(sessionTTL, BearerTokenTTL)

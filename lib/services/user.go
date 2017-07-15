@@ -44,6 +44,10 @@ type User interface {
 	GetRawObject() interface{}
 	// WebSessionInfo returns web session information about user
 	WebSessionInfo(allowedLogins []string) interface{}
+	// GetContext gets the context map for this user.
+	GetContext() map[string]string
+	// SetContext sets the context map for this user.
+	SetContext(map[string]string)
 }
 
 // NewUser creates new empty user
@@ -212,6 +216,16 @@ func (u *UserV2) WebSessionInfo(allowedLogins []string) interface{} {
 	return *out
 }
 
+// GetContext gets the context map for this user.
+func (u *UserV2) GetContext() map[string]string {
+	return u.Spec.Context
+}
+
+// SetContext sets the context map for this user.
+func (u *UserV2) SetContext(context map[string]string) {
+	u.Spec.Context = context
+}
+
 // UserSpecV2 is a specification for V2 user
 type UserSpecV2 struct {
 	// OIDCIdentities lists associated OpenID Connect identities
@@ -224,6 +238,10 @@ type UserSpecV2 struct {
 
 	// Roles is a list of roles assigned to user
 	Roles []string `json:"roles,omitempty"`
+
+	// Context is a map[string]string that contains additional information about
+	// the user that is used when constructing roles for a User.
+	Context map[string]string `json:"context,omitempty"`
 
 	// Status is a login status of the user
 	Status LoginStatus `json:"status"`
@@ -261,6 +279,12 @@ const UserSpecV2SchemaTemplate = `{
       "type": "array",
       "items": {
         "type": "string"
+      }
+    },
+    "context": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z/.0-9_]$": { "type": "string" }
       }
     },
     "oidc_identities": {

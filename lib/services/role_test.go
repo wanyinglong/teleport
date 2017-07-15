@@ -464,3 +464,72 @@ func (s *RoleSuite) TestCheckResourceAccess(c *C) {
 		}
 	}
 }
+
+func (s *RoleSuite) TestApplyContext(c *C) {
+	var tests = []struct {
+		inContext map[string]string
+		inLogins  []string
+		outLogins []string
+	}{
+		// 0 - substitute in allow rule
+		{
+			map[string]string{
+				"foo": "bar",
+			},
+			[]string{`%ctx.foo%`, "root"},
+			[]string{"bar", "root"},
+		},
+		// 1 - substitute in deny rule
+		{
+			map[string]string{
+				"foo": "bar",
+			},
+			[]string{`%ctx.foo%`},
+			[]string{"bar"},
+		},
+		// 2 - no variable in logins
+		{
+			map[string]string{
+				"foo": "bar",
+			},
+			[]string{"root"},
+			[]string{"root"},
+		},
+		// 3 - invalid variable in logins gets passed along
+		{
+			map[string]string{
+				"foo": "bar",
+			},
+			[]string{`ctx.foo%`},
+			[]string{`ctx.foo%`},
+		},
+		// 4 - variable in logins, none in context
+		{
+			map[string]string{
+				"foo": "bar",
+			},
+			[]string{`%ctx.bar%`, "root"},
+			[]string{"root"},
+		},
+	}
+
+	for i, tt := range tests {
+		comment := Commentf("Test %v", i)
+
+		role := &RoleV3{
+			Kind:    KindRole,
+			Version: V3,
+			Metadata: Metadata{
+				Name:      "name1",
+				Namespace: defaults.Namespace,
+			},
+			Spec: RoleSpecV3{
+				Allow: RoleConditions{
+					Logins: tt.inLogins,
+				},
+			},
+		}
+		outRole := role.ApplyContext(tt.inContext)
+		c.Assert(outRole.GetLogins(Allow), DeepEquals, tt.outLogins, comment)
+	}
+}
