@@ -79,42 +79,24 @@ func (s *AuthServer) getSAMLProvider(conn services.SAMLConnector) (*saml2.SAMLSe
 	return serviceProvider, nil
 }
 
-// buildSAMLRoles takes a connector and claims and returns a slice of roles. If the claims
-// match a concrete roles in the connector, those roles are returned directly. If the
-// claims match a template role in the connector, then that role is first created from
-// the template, then returned.
-func (a *AuthServer) buildSAMLRoles(connector services.SAMLConnector, assertionInfo saml2.AssertionInfo, expiresAt time.Time) ([]string, error) {
-	roles := connector.MapAttributes(assertionInfo)
-	if len(roles) == 0 {
-		role, err := connector.RoleFromTemplate(assertionInfo)
-		if err != nil {
-			log.Warningf("[SAML] Unable to map claims to roles or role templates for %q: %v", connector.GetName(), err)
-			return nil, trace.AccessDenied("unable to map claims to roles or role templates for %q: %v", connector.GetName(), err)
+// contextFromAssertions extracts all string assertions and creates a user context
+// item that will be used to build a role.
+func contextFromAssertions(assertionInfo saml2.AssertionInfo) map[string]string {
+	context := make(map[string]string)
+	for _, attr := range assertionInfo.Values {
+		for _, value := range attr.Values {
+			context[attr.Name] = value.Value
 		}
-
-		// figure out ttl for role. expires = now + ttl  =>  ttl = expires - now
-		ttl := expiresAt.Sub(a.clock.Now())
-
-		// upsert templated role
-		err = a.Access.UpsertRole(role, ttl)
-		if err != nil {
-			log.Warningf("[SAML] Unable to upsert templated role for connector: %q: %v", connector.GetName(), err)
-			return nil, trace.AccessDenied("unable to upsert templated role: %q: %v", connector.GetName(), err)
-		}
-
-		roles = []string{role.GetName()}
 	}
 
-	return roles, nil
+	return context
 }
 
 func (a *AuthServer) createSAMLUser(connector services.SAMLConnector, assertionInfo saml2.AssertionInfo, expiresAt time.Time) error {
-	roles, err := a.buildSAMLRoles(connector, assertionInfo, expiresAt)
-	if err != nil {
-		return trace.Wrap(err)
-	}
+	context := contextFromAssertions(assertionInfo)
+	roles := connector.MapAttributes(assertionInfo)
 
-	log.Debugf("[SAML] %v/%v is a dynamic identity, generating user with roles: %v", connector.GetName(), assertionInfo.NameID, roles)
+	log.Debugf("[SAML] %v/%v is a dynamic identity, generating user with context: %v", connector.GetName(), assertionInfo.NameID, context)
 	user, err := services.GetUserMarshaler().GenerateUser(&services.UserV2{
 		Kind:    services.KindUser,
 		Version: services.V2,
@@ -124,6 +106,7 @@ func (a *AuthServer) createSAMLUser(connector services.SAMLConnector, assertionI
 		},
 		Spec: services.UserSpecV2{
 			Roles:          roles,
+			Context:        context,
 			Expires:        expiresAt,
 			SAMLIdentities: []services.ExternalIdentity{{ConnectorID: connector.GetName(), Username: assertionInfo.NameID}},
 			CreatedBy: services.CreatedBy{
