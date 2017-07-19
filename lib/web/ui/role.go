@@ -1,10 +1,6 @@
 package ui
 
-import (
-	"github.com/gravitational/teleport/lib/services"
-
-	"github.com/gravitational/trace"
-)
+import "github.com/gravitational/teleport/lib/services"
 
 // Role describes user role consumed by web ui
 type Role struct {
@@ -17,17 +13,13 @@ type Role struct {
 }
 
 // NewRole creates a new instance of UI Role
-func NewRole(sRole services.Role) (*Role, error) {
+func NewRole(sRole services.Role) Role {
 	uiRole := Role{
 		Name: sRole.GetName(),
 	}
 
-	err := uiRole.Access.init(sRole)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	return &uiRole, nil
+	uiRole.Access.init(sRole)
+	return uiRole
 }
 
 // ToTeleRole converts UI Role to Storage Role

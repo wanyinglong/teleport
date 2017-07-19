@@ -17,10 +17,13 @@ limitations under the License.
 import { formatPattern } from 'app/lib/patternUtils';
 import { AuthProviderTypeEnum } from './services/enums';
 import $ from 'jQuery';
+import { isTestEnv } from './services/utils'
+
+const baseUrl = isTestEnv() ? 'localhost' : window.location.origin;
 
 let cfg = {
 
-  baseUrl: window.location.origin,
+  baseUrl,
 
   helpUrl: 'https://gravitational.com/teleport/docs/quickstart/',
   
@@ -51,8 +54,8 @@ let cfg = {
     ssoSaml: '/v1/webapi/saml/sso?redirect_url=:redirect&connector_id=:providerName',        
     renewTokenPath:'/v1/webapi/sessions/renew',
     sessionPath: '/v1/webapi/sessions',
-    userStatus: '/v1/webapi/user/status',
-    userAclPath: '/v1/webapi/user/acl',    
+    userContextPath: '/v1/webapi/user/context',
+    userStatus: '/v1/webapi/user/status',    
     invitePath: '/v1/webapi/users/invites/:inviteToken',        
     createUserPath: '/v1/webapi/users',
     u2fCreateUserChallengePath: '/v1/webapi/u2f/signuptokens/:inviteToken',

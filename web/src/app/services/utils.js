@@ -14,6 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-module.exports.getters = require('./getters');
-module.exports.actions = require('./actions');
-module.exports.nodeStore = require('./userStore');
+import { LocalStorageKeys } from './enums'
+
+export const isDevEnv = () => process.env.NODE_ENV === 'development';
+
+export const isTestEnv = () => process.env.NODE_ENV === 'test';
+
+export const setBearerToken = token => {  
+  localStorage.setItem(LocalStorageKeys.TOKEN, JSON.stringify(token));  
+}
+
+export const getBearerToken = () => {
+  let item = localStorage.getItem(LocalStorageKeys.TOKEN);
+  if (item) {
+    return JSON.parse(item);
+  }
+
+  return null;
+}

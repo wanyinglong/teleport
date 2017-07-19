@@ -1,5 +1,1 @@
-import keyMirror from 'keymirror'
-
-export default keyMirror({
-  USERACL_RECEIVE: null      
-})
+export const RECEIVE_USERACL = 'TLPT_USERACL_RECEIVE';

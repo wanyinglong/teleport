@@ -210,7 +210,7 @@ func NewHandler(cfg Config, opts ...HandlerOption) (*RewritingHandler, error) {
 
 	// User Status (used by client to check if user session is valid)
 	h.GET("/webapi/user/status", h.WithAuth(h.getUserStatus))
-	h.GET("/webapi/user/acl", h.WithAuth(h.getUserACL))
+	h.GET("/webapi/user/context", h.WithAuth(h.getUserContext))
 
 	// if Web UI is enabled, check the assets dir:
 	var (
@@ -309,19 +309,17 @@ func (m *Handler) getUserStatus(w http.ResponseWriter, r *http.Request, _ httpro
 	return ok(), nil
 }
 
-// getUserACL returns currently signed-in user permissions
+// getUserContext returns user context
 //
-// GET /webapi/user/acl
+// GET /webapi/user/context
 //
-// { "admin": { "enabled": false }, "kubernetes": { "groups": null }, "license": { "enabled": false }, "applications": { "fullAccess": false }, "cluster": { "enabled": false }, "ssh": { "logins": null } }
-//
-func (m *Handler) getUserACL(w http.ResponseWriter, r *http.Request, _ httprouter.Params, c *SessionContext) (interface{}, error) {
+func (m *Handler) getUserContext(w http.ResponseWriter, r *http.Request, _ httprouter.Params, c *SessionContext) (interface{}, error) {
 	clt, err := c.GetClient()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	allTeleRoles, err := clt.GetRoles()
+	allRoles, err := clt.GetRoles()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -331,26 +329,8 @@ func (m *Handler) getUserACL(w http.ResponseWriter, r *http.Request, _ httproute
 		return nil, trace.Wrap(err)
 	}
 
-	userTeleRoles := user.GetRoles()
-	roleNamesMap := map[string]bool{}
-	for _, name := range userTeleRoles {
-		roleNamesMap[name] = true
-	}
-
-	accessSet := []*ui.RoleAccess{}
-	for _, item := range allTeleRoles {
-		if roleNamesMap[item.GetName()] {
-			uiRole, err := ui.NewRole(item)
-			if err != nil {
-				return nil, trace.Wrap(err)
-			}
-			accessSet = append(accessSet, &uiRole.Access)
-		}
-	}
-
-	uiaccess := ui.MergeAccessSet(accessSet)
-
-	return uiaccess, nil
+	userContext := ui.NewUserContext(user, allRoles)
+	return userContext, nil
 }
 
 func buildUniversalSecondFactorSettings(authClient auth.ClientI) *client.U2FSettings {
@@ -661,8 +641,6 @@ type CreateSessionResponse struct {
 	Type string `json:"type"`
 	// Token value
 	Token string `json:"token"`
-	// User represents the user
-	User interface{} `json:"user"`
 	// ExpiresIn sets seconds before this token is not valid
 	ExpiresIn int `json:"expires_in"`
 }
@@ -672,46 +650,19 @@ type createSessionResponseRaw struct {
 	Type string `json:"type"`
 	// Token value
 	Token string `json:"token"`
-	// User represents the user
-	User json.RawMessage `json:"user"`
 	// ExpiresIn sets seconds before this token is not valid
 	ExpiresIn int `json:"expires_in"`
 }
 
-func (r createSessionResponseRaw) response() (*CreateSessionResponse, services.User, error) {
-	user, err := services.GetUserMarshaler().UnmarshalUser(r.User)
-	if err != nil {
-		return nil, nil, trace.Wrap(err)
-	}
-	return &CreateSessionResponse{Type: r.Type, Token: r.Token, ExpiresIn: r.ExpiresIn, User: user.WebSessionInfo(nil)}, user, nil
+func (r createSessionResponseRaw) response() (*CreateSessionResponse, error) {
+	return &CreateSessionResponse{Type: r.Type, Token: r.Token, ExpiresIn: r.ExpiresIn}, nil
 }
 
 func NewSessionResponse(ctx *SessionContext) (*CreateSessionResponse, error) {
-	clt, err := ctx.GetClient()
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
 	webSession := ctx.GetWebSession()
-	user, err := clt.GetUser(webSession.GetUser())
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	var roles services.RoleSet
-	for _, roleName := range user.GetRoles() {
-		role, err := clt.GetRole(roleName)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-		roles = append(roles, role)
-	}
-	allowedLogins, err := roles.CheckLoginDuration(0)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
 	return &CreateSessionResponse{
 		Type:      roundtrip.AuthBearer,
 		Token:     webSession.GetBearerToken(),
-		User:      user.WebSessionInfo(allowedLogins),
 		ExpiresIn: int(webSession.GetBearerTokenExpiryTime().Sub(time.Now()) / time.Second),
 	}, nil
 }

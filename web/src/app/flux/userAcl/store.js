@@ -1,6 +1,6 @@
 import { Store, toImmutable } from 'nuclear-js';
 import { Record, Map, List } from 'immutable';
-import { USERACL_RECEIVE } from './actionTypes';
+import { RECEIVE_USERACL } from './actionTypes';
 
 const sortLogins = loginList => {
   let index = loginList.indexOf('root');
@@ -50,7 +50,7 @@ export default Store({
   },
 
   initialize() {          
-    this.on(USERACL_RECEIVE, receiveAcl);            
+    this.on(RECEIVE_USERACL, receiveAcl);            
   }
 })
 
