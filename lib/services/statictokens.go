@@ -28,16 +28,17 @@ import (
 	"github.com/jonboulle/clockwork"
 )
 
-// StaticTokens define a list of static tokens used to provision a nodes. This
-// is a configuration resource, never create more than one instance of it.
+// StaticTokens define a list of static []ProvisionToken used to provision a
+// node. StaticTokens is a configuration resource, never create more than one instance
+// of it.
 type StaticTokens interface {
 	// Resource provides common resource properties.
 	Resource
 
 	// SetStaticTokens sets the list of static tokens used to provision nodes.
-	SetStaticTokens([]string)
+	SetStaticTokens([]ProvisionToken)
 	// GetStaticTokens gets the list of static tokens used to provision nodes.
-	GetStaticTokens() []string
+	GetStaticTokens() []ProvisionToken
 
 	// CheckAndSetDefaults checks and set default values for missing fields.
 	CheckAndSetDefaults() error
@@ -75,7 +76,7 @@ type StaticTokensV2 struct {
 type StaticTokensSpecV2 struct {
 	// StaticTokens is a list of tokens that can be used to add nodes to the
 	// cluster.
-	StaticTokens []string `json:"static_tokens"`
+	StaticTokens []ProvisionToken `json:"static_tokens"`
 }
 
 // GetName returns the name of the StaticTokens resource.
@@ -109,12 +110,12 @@ func (c *StaticTokensV2) GetMetadata() Metadata {
 }
 
 // SetStaticTokens sets the list of static tokens used to provision nodes.
-func (c *StaticTokensV2) SetStaticTokens(s []string) {
+func (c *StaticTokensV2) SetStaticTokens(s []ProvisionToken) {
 	c.Spec.StaticTokens = s
 }
 
 // GetStaticTokens gets the list of static tokens used to provision nodes.
-func (c *StaticTokensV2) GetStaticTokens() []string {
+func (c *StaticTokensV2) GetStaticTokens() []ProvisionToken {
 	return c.Spec.StaticTokens
 }
 
@@ -141,12 +142,27 @@ const StaticTokensSpecSchemaTemplate = `{
   "properties": {
     "type": "object",
     "additionalProperties": false,
-    "static_tokens": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    }%v
+	"static_tokens": {
+		"type": "array",
+		"items": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"expires": {
+					"type": "string"
+				},
+				"roles": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"token": {
+					"type": "string"
+				}
+			}
+		}
+	}%v
   }
 }`
 

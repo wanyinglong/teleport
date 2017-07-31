@@ -16,19 +16,22 @@ limitations under the License.
 
 package services
 
+// ClusterConfiguration stores the cluster configuration in the backend. All
+// the resources modified by this interface can only have a single instance
+// in the backend.
 type ClusterConfiguration interface {
 	// SetClusterName sets the name of the cluster.
-	SetClusterName(string)
+	SetClusterName(string) error
 	// GetClusterName gets the name of the cluster.
-	GetClusterName() string
+	GetClusterName() (string, error)
 
 	// SetStaticTokens sets the list of static tokens used to provision nodes.
-	SetStaticTokens([]string)
+	SetStaticTokens([]ProvisionToken) error
 	// GetStaticTokens gets the list of static tokens used to provision nodes.
-	GetStaticTokens() []string
+	GetStaticTokens() ([]ProvisionToken, error)
 
-	// GetClusterAuthPreference returns the authentication preferences for a cluster.
-	GetClusterAuthPreference() (AuthPreference, error)
-	// SetClusterAuthPreference sets the authentication preferences for a cluster.
-	SetClusterAuthPreference(AuthPreference) error
+	// GetAuthPreference returns the authentication preferences for a cluster.
+	GetAuthPreference() (AuthPreference, error)
+	// SetAuthPreference sets the authentication preferences for a cluster.
+	SetAuthPreference(AuthPreference) error
 }

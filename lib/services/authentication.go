@@ -27,18 +27,20 @@ import (
 	"github.com/gravitational/trace"
 )
 
-// ClusterAuthPreference defines an interface to get and set
-// authentication preferences for a cluster.
-type ClusterAuthPreference interface {
-	// GetClusterAuthPreference returns the authentication preferences for a cluster.
-	GetClusterAuthPreference() (AuthPreference, error)
-
-	// SetClusterAuthPreference sets the authentication preferences for a cluster.
-	SetClusterAuthPreference(AuthPreference) error
-}
+//// ClusterAuthPreference defines an interface to get and set
+//// authentication preferences for a cluster.
+//type ClusterAuthPreference interface {
+//	// GetClusterAuthPreference returns the authentication preferences for a cluster.
+//	GetClusterAuthPreference() (AuthPreference, error)
+//
+//	// SetClusterAuthPreference sets the authentication preferences for a cluster.
+//	SetClusterAuthPreference(AuthPreference) error
+//}
 
 // AuthPreference defines the authentication preferences for a specific
 // cluster. It defines the type (local, oidc) and second factor (off, otp, oidc).
+// AuthPreference is a configuration resource, never create more than one instance
+// of it.
 type AuthPreference interface {
 	// GetType returns the type of authentication.
 	GetType() string
