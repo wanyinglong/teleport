@@ -43,7 +43,7 @@ type AuthPreference interface {
 	SetSecondFactor(string)
 
 	// GetU2F gets the U2F configuration settings.
-	GetU2F() *U2F
+	GetU2F() (*U2F, error)
 	// SetU2F sets the U2F configuration settings.
 	SetU2F(*U2F)
 
@@ -104,8 +104,11 @@ func (c *AuthPreferenceV2) SetSecondFactor(s string) {
 }
 
 // GetU2F gets the U2F configuration settings.
-func (c *AuthPreferenceV2) GetU2F() *U2F {
-	return c.Spec.U2F
+func (c *AuthPreferenceV2) GetU2F() (*U2F, error) {
+	if c.Spec.U2F == nil {
+		return nil, trace.NotFound("U2F configuration not found")
+	}
+	return c.Spec.U2F, nil
 }
 
 // SetU2F sets the U2F configuration settings.

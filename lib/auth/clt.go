@@ -1309,7 +1309,7 @@ func (c *Client) DeleteRole(name string) error {
 	return trace.Wrap(err)
 }
 
-func (c *Client) GetClusterAuthPreference() (services.AuthPreference, error) {
+func (c *Client) GetAuthPreference() (services.AuthPreference, error) {
 	out, err := c.Get(c.Endpoint("authentication", "preference"), url.Values{})
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -1323,7 +1323,7 @@ func (c *Client) GetClusterAuthPreference() (services.AuthPreference, error) {
 	return cap, nil
 }
 
-func (c *Client) SetClusterAuthPreference(cap services.AuthPreference) error {
+func (c *Client) SetAuthPreference(cap services.AuthPreference) error {
 	data, err := services.GetAuthPreferenceMarshaler().Marshal(cap)
 	if err != nil {
 		return trace.Wrap(err)
@@ -1337,33 +1337,33 @@ func (c *Client) SetClusterAuthPreference(cap services.AuthPreference) error {
 	return nil
 }
 
-func (c *Client) GetUniversalSecondFactor() (services.UniversalSecondFactor, error) {
-	out, err := c.Get(c.Endpoint("authentication", "preference", "u2f"), url.Values{})
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	universalSecondFactor, err := services.GetUniversalSecondFactorMarshaler().Unmarshal(out.Bytes())
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	return universalSecondFactor, nil
-}
-
-func (c *Client) SetUniversalSecondFactor(universalSecondFactor services.UniversalSecondFactor) error {
-	data, err := services.GetUniversalSecondFactorMarshaler().Marshal(universalSecondFactor)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	_, err = c.PostJSON(c.Endpoint("authentication", "preference", "u2f"), &setUniversalSecondFactorReq{UniversalSecondFactor: data})
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	return nil
-}
+//func (c *Client) GetUniversalSecondFactor() (services.UniversalSecondFactor, error) {
+//	out, err := c.Get(c.Endpoint("authentication", "preference", "u2f"), url.Values{})
+//	if err != nil {
+//		return nil, trace.Wrap(err)
+//	}
+//
+//	universalSecondFactor, err := services.GetUniversalSecondFactorMarshaler().Unmarshal(out.Bytes())
+//	if err != nil {
+//		return nil, trace.Wrap(err)
+//	}
+//
+//	return universalSecondFactor, nil
+//}
+//
+//func (c *Client) SetUniversalSecondFactor(universalSecondFactor services.UniversalSecondFactor) error {
+//	data, err := services.GetUniversalSecondFactorMarshaler().Marshal(universalSecondFactor)
+//	if err != nil {
+//		return trace.Wrap(err)
+//	}
+//
+//	_, err = c.PostJSON(c.Endpoint("authentication", "preference", "u2f"), &setUniversalSecondFactorReq{UniversalSecondFactor: data})
+//	if err != nil {
+//		return trace.Wrap(err)
+//	}
+//
+//	return nil
+//}
 
 // GetLocalClusterName returns local cluster name
 func (c *Client) GetLocalClusterName() (string, error) {

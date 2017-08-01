@@ -685,13 +685,14 @@ func (a *AuthWithRoles) SetClusterName(c string) error {
 // GetClusterName gets the name of the cluster.
 func (a *AuthWithRoles) GetClusterName() (string, error) {
 	if err := a.action(defaults.Namespace, services.KindAuthServer, services.ActionRead); err != nil {
-		return trace.Wrap(err)
+		return "", trace.Wrap(err)
 	}
+
 	return a.authServer.GetClusterName()
 }
 
 // SetStaticTokens sets the list of static tokens used to provision nodes.
-func (a *AuthWithRoles) SetStaticTokens(s []ProvisionToken) error {
+func (a *AuthWithRoles) SetStaticTokens(s []services.ProvisionToken) error {
 	if err := a.action(defaults.Namespace, services.KindAuthServer, services.ActionWrite); err != nil {
 		return trace.Wrap(err)
 	}
@@ -699,9 +700,9 @@ func (a *AuthWithRoles) SetStaticTokens(s []ProvisionToken) error {
 }
 
 // GetStaticTokens gets the list of static tokens used to provision nodes.
-func (a *AuthWithRoles) GetStaticTokens() ([]ProvisionToken, error) {
+func (a *AuthWithRoles) GetStaticTokens() ([]services.ProvisionToken, error) {
 	if err := a.action(defaults.Namespace, services.KindAuthServer, services.ActionWrite); err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 	return a.authServer.GetStaticTokens()
 }
@@ -712,7 +713,7 @@ func (a *AuthWithRoles) GetAuthPreference() (services.AuthPreference, error) {
 		return nil, trace.Wrap(err)
 	}
 
-	return a.authServer.GetClusterAuthPreference()
+	return a.authServer.GetAuthPreference()
 }
 
 func (a *AuthWithRoles) SetAuthPreference(cap services.AuthPreference) error {
@@ -721,7 +722,7 @@ func (a *AuthWithRoles) SetAuthPreference(cap services.AuthPreference) error {
 		return trace.Wrap(err)
 	}
 
-	return a.authServer.SetClusterAuthPreference(cap)
+	return a.authServer.SetAuthPreference(cap)
 }
 
 //func (a *AuthWithRoles) GetUniversalSecondFactor() (services.UniversalSecondFactor, error) {

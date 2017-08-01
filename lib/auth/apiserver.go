@@ -142,7 +142,11 @@ func NewAPIServer(config *APIConfig) http.Handler {
 	srv.GET("/:version/roles/:role", srv.withAuth(srv.getRole))
 	srv.DELETE("/:version/roles/:role", srv.withAuth(srv.deleteRole))
 
-	// cluster authentication preferences
+	// cluster configuration
+	srv.GET("/:version/configuration/name", srv.withAuth(srv.getClusterName))
+	srv.POST("/:version/configuration/name", srv.withAuth(srv.setClusterName))
+	srv.GET("/:version/configuration/static_tokens", srv.withAuth(srv.getStaticTokens))
+	srv.POST("/:version/configuration/static_tokens", srv.withAuth(srv.setStaticTokens))
 	srv.GET("/:version/authentication/preference", srv.withAuth(srv.getClusterAuthPreference))
 	srv.POST("/:version/authentication/preference", srv.withAuth(srv.setClusterAuthPreference))
 	//srv.GET("/:version/authentication/preference/u2f", srv.withAuth(srv.getUniversalSecondFactor))
@@ -866,19 +870,14 @@ func (s *APIServer) getDomainName(auth ClientI, w http.ResponseWriter, r *http.R
 
 // getU2FAppID returns the U2F AppID in the auth configuration
 func (s *APIServer) getU2FAppID(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
-	//universalSecondFactor, err := auth.GetUniversalSecondFactor()
-	//if err != nil {
-	//	return nil, trace.Wrap(err)
-	//}
-
 	cap, err := auth.GetAuthPreference()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	universalSecondFactor := cap.GetU2F()
-	if universalSecondFactor == nil {
-		return nil, trace.NotFound("no U2F settings found")
+	universalSecondFactor, err := cap.GetU2F()
+	if err != nil {
+		return nil, trace.Wrap(err)
 	}
 
 	w.Header().Set("Content-Type", "application/fido.trusted-apps+json")
@@ -1591,13 +1590,30 @@ func (s *APIServer) getRoles(auth ClientI, w http.ResponseWriter, r *http.Reques
 	return out, nil
 }
 
-func (s *APIServer) deleteRole(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
-	role := p.ByName("role")
-	if err := auth.DeleteRole(role); err != nil {
-		return nil, trace.Wrap(err)
-	}
-	return message(fmt.Sprintf("role '%v' deleted", role)), nil
-}
+//func (s *APIServer) deleteRole(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+//	role := p.ByName("role")
+//	if err := auth.DeleteRole(role); err != nil {
+//		return nil, trace.Wrap(err)
+//	}
+//	return message(fmt.Sprintf("role '%v' deleted", role)), nil
+//}
+//
+//func (s *APIServer) getClusterName(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+//	c, err := auth.GetClusterName()
+//	if err != nil {
+//		return nil, trace.Wrap(err)
+//	}
+//
+//}
+//
+//func (s *APIServer) setClusterName(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+//}
+//
+//func (s *APIServer) getStaticTokens(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+//}
+//
+//func (s *APIServer) setStaticTokens(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+//}
 
 func (s *APIServer) getClusterAuthPreference(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
 	cap, err := auth.GetAuthPreference()

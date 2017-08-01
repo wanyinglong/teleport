@@ -320,7 +320,12 @@ func (s *AuthServer) PreAuthenticatedSignIn(user string) (services.WebSession, e
 }
 
 func (s *AuthServer) U2FSignRequest(user string, password []byte) (*u2f.SignRequest, error) {
-	universalSecondFactor, err := s.GetUniversalSecondFactor()
+	cap, err := s.GetAuthPreference()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	universalSecondFactor, err := cap.GetU2F()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -337,7 +342,7 @@ func (s *AuthServer) U2FSignRequest(user string, password []byte) (*u2f.SignRequ
 		return nil, trace.Wrap(err)
 	}
 
-	challenge, err := u2f.NewChallenge(universalSecondFactor.GetAppID(), universalSecondFactor.GetFacets())
+	challenge, err := u2f.NewChallenge(universalSecondFactor.AppID, universalSecondFactor.Facets)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -354,7 +359,11 @@ func (s *AuthServer) U2FSignRequest(user string, password []byte) (*u2f.SignRequ
 
 func (s *AuthServer) CheckU2FSignResponse(user string, response *u2f.SignResponse) error {
 	// before trying to register a user, see U2F is actually setup on the backend
-	_, err := s.GetUniversalSecondFactor()
+	cap, err := s.GetAuthPreference()
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	_, err = cap.GetU2F()
 	if err != nil {
 		return trace.Wrap(err)
 	}
