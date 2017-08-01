@@ -526,42 +526,34 @@ type AuthenticationConfig struct {
 	OIDC         *OIDCConnector         `yaml:"oidc,omitempty"`
 }
 
-// Parse returns the Authentication Configuration in three parts, the AuthPreference (type and second factor) as well
-// as OIDCConnector and UniversalSecondFactor that define how those two are configured (if provided).
-func (a *AuthenticationConfig) Parse() (services.AuthPreference, services.OIDCConnector, services.UniversalSecondFactor, error) {
+// Parse returns the Authentication Configuration in two parts: AuthPreference
+// (type, second factor, u2f) and OIDCConnector.
+func (a *AuthenticationConfig) Parse() (services.AuthPreference, services.OIDCConnector, error) {
 	var err error
 
 	ap, err := services.NewAuthPreference(services.AuthPreferenceSpecV2{
 		Type:         a.Type,
 		SecondFactor: a.SecondFactor,
+		U2F:          a.U2F.Parse(),
 	})
 	if err != nil {
-		return nil, nil, nil, trace.Wrap(err)
+		return nil, nil, trace.Wrap(err)
 	}
 
 	// check to make sure the configuration is valid
 	err = ap.CheckAndSetDefaults()
 	if err != nil {
-		return nil, nil, nil, trace.Wrap(err)
+		return nil, nil, trace.Wrap(err)
 	}
 
-	var oidcConnector services.OIDCConnector
 	if a.OIDC != nil {
 		oidcConnector, err = a.OIDC.Parse()
 		if err != nil {
-			return nil, nil, nil, trace.Wrap(err)
+			return nil, nil, trace.Wrap(err)
 		}
 	}
 
-	var universalSecondFactor services.UniversalSecondFactor
-	if a.U2F != nil {
-		universalSecondFactor, err = a.U2F.Parse()
-		if err != nil {
-			return nil, nil, nil, trace.Wrap(err)
-		}
-	}
-
-	return ap, oidcConnector, universalSecondFactor, nil
+	return ap, oidcConnector, nil
 }
 
 type UniversalSecondFactor struct {
@@ -569,11 +561,11 @@ type UniversalSecondFactor struct {
 	Facets []string `yaml:"facets"`
 }
 
-func (u *UniversalSecondFactor) Parse() (services.UniversalSecondFactor, error) {
-	return services.NewUniversalSecondFactor(services.UniversalSecondFactorSpecV2{
+func (u *UniversalSecondFactor) Parse() services.U2F {
+	return services.U2F{
 		AppID:  u.AppID,
 		Facets: u.Facets,
-	})
+	}
 }
 
 // SSH is 'ssh_service' section of the config file

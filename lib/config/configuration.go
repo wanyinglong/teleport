@@ -307,9 +307,9 @@ func ApplyFileConfig(fc *FileConfig, cfg *service.Config) error {
 			"Teleport documentation for more details: https://www.example.com."
 		log.Warnf(warningMessage)
 	}
-	// INTERNAL: Authorities and ReverseTunnels don't follow the same pattern as
-	// the rest of the configuration (they are not configuration singletons).
-	// However, we need to keep them around while Telekube uses them.
+	// INTERNAL: Authorities (plus Roles) and ReverseTunnels don't follow the
+	// same pattern as the rest of the configuration (they are not configuration
+	// singletons). However, we need to keep them around while Telekube uses them.
 	for _, authority := range fc.Auth.Authorities {
 		ca, role, err := authority.Parse()
 		if err != nil {
@@ -325,8 +325,7 @@ func ApplyFileConfig(fc *FileConfig, cfg *service.Config) error {
 		}
 		cfg.ReverseTunnels = append(cfg.ReverseTunnels, tun)
 	}
-	// DEPRECATED: you can no longer configure trusted clusters using file configuring, you
-	// have to use resources now. remove the following message in Teleport 2.4.
+	// DEPRECATED: Remove the following message in Teleport 2.4.
 	if len(fc.Auth.TrustedClusters) > 0 {
 		warningMessage := "Configuring Trusted Clusters using file configuration has " +
 			"been deprecated, Trusted Clusters must now be configured using resources. " +
@@ -335,9 +334,9 @@ func ApplyFileConfig(fc *FileConfig, cfg *service.Config) error {
 			"anymore. Refer to Teleport documentation for more details: https://www.example.com."
 		log.Warnf(warningMessage)
 	}
-	// Cluster name.
+	// read in and set the cluster name
 	cfg.Auth.DomainName = fc.Auth.DomainName
-	// Static tokens.
+	// read in and set any static tokens used to provision nodes
 	for _, token := range fc.Auth.StaticTokens {
 		roles, tokenValue, err := token.Parse()
 		if err != nil {
@@ -345,21 +344,15 @@ func ApplyFileConfig(fc *FileConfig, cfg *service.Config) error {
 		}
 		cfg.Auth.StaticTokens = append(cfg.Auth.StaticTokens, services.ProvisionToken{Token: tokenValue, Roles: roles, Expires: time.Unix(0, 0)})
 	}
-	// Authentication preferences.
+	// read in and set authentication preferences
 	if fc.Auth.Authentication != nil {
-		authPreference, oidcConnector, universalSecondFactor, err := fc.Auth.Authentication.Parse()
+		authPreference, oidcConnector, err := fc.Auth.Authentication.Parse()
 		if err != nil {
 			return trace.Wrap(err)
 		}
 		cfg.Auth.Preference = authPreference
 
-		// set u2f settings, note this will override anything set with the old format
-		if universalSecondFactor != nil {
-			cfg.Auth.U2F = universalSecondFactor
-		}
-
-		// DEPRECATED: you can no longer configure oidc connectors using file configuring, you
-		// have to use resources now. remove the following message in Teleport 2.4.
+		// DEPRECATED: Remove the following message in Teleport 2.4.
 		if oidcConnector != nil {
 			warningMessage := "Configuring OIDC connectors using file configuration is " +
 				"no longer supported, OIDC connectors must be configured using resources. " +

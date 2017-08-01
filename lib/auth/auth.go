@@ -84,31 +84,35 @@ func NewAuthServer(cfg *InitConfig, opts ...AuthServerOption) *AuthServer {
 	if cfg.Access == nil {
 		cfg.Access = local.NewAccessService(cfg.Backend)
 	}
-	if cfg.ClusterAuthPreferenceService == nil {
-		cfg.ClusterAuthPreferenceService = local.NewClusterAuthPreferenceService(cfg.Backend)
+	if cfg.ClusterConfiguration == nil {
+		cfg.ClusterConfiguration = local.NewClusterConfigurationService(cfg.Backend)
 	}
-	if cfg.UniversalSecondFactorService == nil {
-		cfg.UniversalSecondFactorService = local.NewUniversalSecondFactorService(cfg.Backend)
-	}
+	//if cfg.ClusterAuthPreferenceService == nil {
+	//	cfg.ClusterAuthPreferenceService = local.NewClusterAuthPreferenceService(cfg.Backend)
+	//}
+	//if cfg.UniversalSecondFactorService == nil {
+	//	cfg.UniversalSecondFactorService = local.NewUniversalSecondFactorService(cfg.Backend)
+	//}
 	closeCtx, cancelFunc := context.WithCancel(context.TODO())
 	as := AuthServer{
-		bk:                            cfg.Backend,
-		Authority:                     cfg.Authority,
-		Trust:                         cfg.Trust,
-		Presence:                      cfg.Presence,
-		Provisioner:                   cfg.Provisioner,
-		Identity:                      cfg.Identity,
-		Access:                        cfg.Access,
-		DomainName:                    cfg.DomainName,
-		AuthServiceName:               cfg.AuthServiceName,
-		StaticTokens:                  cfg.StaticTokens,
-		ClusterAuthPreference:         cfg.ClusterAuthPreferenceService,
-		UniversalSecondFactorSettings: cfg.UniversalSecondFactorService,
-		oidcClients:                   make(map[string]*oidcClient),
-		samlProviders:                 make(map[string]*samlProvider),
-		DeveloperMode:                 cfg.DeveloperMode,
-		cancelFunc:                    cancelFunc,
-		closeCtx:                      closeCtx,
+		bk:                   cfg.Backend,
+		Authority:            cfg.Authority,
+		Trust:                cfg.Trust,
+		Presence:             cfg.Presence,
+		Provisioner:          cfg.Provisioner,
+		Identity:             cfg.Identity,
+		Access:               cfg.Access,
+		DomainName:           cfg.DomainName,
+		AuthServiceName:      cfg.AuthServiceName,
+		StaticTokens:         cfg.StaticTokens,
+		ClusterConfiguration: cfg.ClusterConfiguration,
+		//ClusterAuthPreference:         cfg.ClusterAuthPreferenceService,
+		//UniversalSecondFactorSettings: cfg.UniversalSecondFactorService,
+		oidcClients:   make(map[string]*oidcClient),
+		samlProviders: make(map[string]*samlProvider),
+		DeveloperMode: cfg.DeveloperMode,
+		cancelFunc:    cancelFunc,
+		closeCtx:      closeCtx,
 	}
 	for _, o := range opts {
 		o(&as)
@@ -160,8 +164,8 @@ type AuthServer struct {
 	services.Provisioner
 	services.Identity
 	services.Access
-	services.ClusterAuthPreference
-	services.UniversalSecondFactorSettings
+	services.ClusterConfiguration
+	//services.UniversalSecondFactorSettings
 }
 
 func (a *AuthServer) Close() error {

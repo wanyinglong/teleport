@@ -1653,8 +1653,9 @@ type ClientI interface {
 	services.Access
 	WebService
 	session.Service
-	services.ClusterAuthPreference
-	services.UniversalSecondFactorSettings
+	services.ClusterConfiguration
+	//services.ClusterAuthPreference
+	//services.UniversalSecondFactorSettings
 
 	ValidateTrustedCluster(*ValidateTrustedClusterRequest) (*ValidateTrustedClusterResponse, error)
 	GetDomainName() (string, error)

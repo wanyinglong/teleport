@@ -674,7 +674,39 @@ func (a *AuthWithRoles) DeleteRole(name string) error {
 	return a.authServer.DeleteRole(name)
 }
 
-func (a *AuthWithRoles) GetClusterAuthPreference() (services.AuthPreference, error) {
+// SetClusterName sets the name of the cluster.
+func (a *AuthWithRoles) SetClusterName(c string) error {
+	if err := a.action(defaults.Namespace, services.KindAuthServer, services.ActionWrite); err != nil {
+		return trace.Wrap(err)
+	}
+	return a.authServer.SetClusterName(c)
+}
+
+// GetClusterName gets the name of the cluster.
+func (a *AuthWithRoles) GetClusterName() (string, error) {
+	if err := a.action(defaults.Namespace, services.KindAuthServer, services.ActionRead); err != nil {
+		return trace.Wrap(err)
+	}
+	return a.authServer.GetClusterName()
+}
+
+// SetStaticTokens sets the list of static tokens used to provision nodes.
+func (a *AuthWithRoles) SetStaticTokens(s []ProvisionToken) error {
+	if err := a.action(defaults.Namespace, services.KindAuthServer, services.ActionWrite); err != nil {
+		return trace.Wrap(err)
+	}
+	return a.authServer.SetStaticTokens(s)
+}
+
+// GetStaticTokens gets the list of static tokens used to provision nodes.
+func (a *AuthWithRoles) GetStaticTokens() ([]ProvisionToken, error) {
+	if err := a.action(defaults.Namespace, services.KindAuthServer, services.ActionWrite); err != nil {
+		return trace.Wrap(err)
+	}
+	return a.authServer.GetStaticTokens()
+}
+
+func (a *AuthWithRoles) GetAuthPreference() (services.AuthPreference, error) {
 	err := a.action(defaults.Namespace, services.KindClusterAuthPreference, services.ActionRead)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -683,7 +715,7 @@ func (a *AuthWithRoles) GetClusterAuthPreference() (services.AuthPreference, err
 	return a.authServer.GetClusterAuthPreference()
 }
 
-func (a *AuthWithRoles) SetClusterAuthPreference(cap services.AuthPreference) error {
+func (a *AuthWithRoles) SetAuthPreference(cap services.AuthPreference) error {
 	err := a.action(defaults.Namespace, services.KindClusterAuthPreference, services.ActionWrite)
 	if err != nil {
 		return trace.Wrap(err)
@@ -692,23 +724,23 @@ func (a *AuthWithRoles) SetClusterAuthPreference(cap services.AuthPreference) er
 	return a.authServer.SetClusterAuthPreference(cap)
 }
 
-func (a *AuthWithRoles) GetUniversalSecondFactor() (services.UniversalSecondFactor, error) {
-	err := a.action(defaults.Namespace, services.KindUniversalSecondFactor, services.ActionRead)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	return a.authServer.GetUniversalSecondFactor()
-}
-
-func (a *AuthWithRoles) SetUniversalSecondFactor(u2f services.UniversalSecondFactor) error {
-	err := a.action(defaults.Namespace, services.KindUniversalSecondFactor, services.ActionWrite)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	return a.authServer.SetUniversalSecondFactor(u2f)
-}
+//func (a *AuthWithRoles) GetUniversalSecondFactor() (services.UniversalSecondFactor, error) {
+//	err := a.action(defaults.Namespace, services.KindUniversalSecondFactor, services.ActionRead)
+//	if err != nil {
+//		return nil, trace.Wrap(err)
+//	}
+//
+//	return a.authServer.GetUniversalSecondFactor()
+//}
+//
+//func (a *AuthWithRoles) SetUniversalSecondFactor(u2f services.UniversalSecondFactor) error {
+//	err := a.action(defaults.Namespace, services.KindUniversalSecondFactor, services.ActionWrite)
+//	if err != nil {
+//		return trace.Wrap(err)
+//	}
+//
+//	return a.authServer.SetUniversalSecondFactor(u2f)
+//}
 
 // DeleteAllCertAuthorities deletes all certificate authorities of a certain type
 func (a *AuthWithRoles) DeleteAllCertAuthorities(caType services.CertAuthType) error {

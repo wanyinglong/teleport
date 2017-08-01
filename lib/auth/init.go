@@ -87,11 +87,14 @@ type InitConfig struct {
 	// Access is service controlling access to resources
 	Access services.Access
 
-	// ClusterAuthPreferenceService is a service to get and set authentication preferences.
-	ClusterAuthPreferenceService services.ClusterAuthPreference
+	// ClusterConfiguration is a services that holds cluster wide configuration.
+	ClusterConfiguration services.ClusterConfiguration
 
-	// UniversalSecondFactorService is a service to get and set universal second factor settings.
-	UniversalSecondFactorService services.UniversalSecondFactorSettings
+	//// ClusterAuthPreferenceService is a service to get and set authentication preferences.
+	//ClusterAuthPreferenceService services.ClusterAuthPreference
+
+	//// UniversalSecondFactorService is a service to get and set universal second factor settings.
+	//UniversalSecondFactorService services.UniversalSecondFactorSettings
 
 	// Roles is a set of roles to create
 	Roles []services.Role
@@ -131,73 +134,53 @@ func Init(cfg InitConfig, dynamicConfig bool) (*AuthServer, *Identity, error) {
 	// check that user CA and host CA are present and set the certs if needed
 	asrv := NewAuthServer(&cfg)
 
-	// we determine if it's the first start by checking if the CA's are set
-	firstStart, err := isFirstStart(asrv, cfg)
-	if err != nil {
-		return nil, nil, trace.Wrap(err)
+	// INTERNAL: Authorities (plus Roles) and ReverseTunnels don't follow the
+	// same pattern as the rest of the configuration (they are not configuration
+	// singletons). However, we need to keep them around while Telekube uses them.
+	for _, role := range cfg.Roles {
+		if err := asrv.UpsertRole(role, backend.Forever); err != nil {
+			return nil, nil, trace.Wrap(err)
+		}
+		log.Infof("[INIT] Created Role: %v", role)
 	}
-
-	// the logic for when to upload resources to the backend is as follows:
-	//
-	// if dynamicConfig is false:                   upload resources
-	// if dynamicConfig is true AND firstStart:     upload resources
-	// if dynamicConfig is true AND NOT firstStart: don't upload resources
-	uploadResources := true
-	if dynamicConfig == true && firstStart == false {
-		uploadResources = false
-	}
-
-	if uploadResources {
-		err = asrv.SetClusterAuthPreference(cfg.AuthPreference)
+	for i := range cfg.Authorities {
+		ca := cfg.Authorities[i]
+		ca, err = services.GetCertAuthorityMarshaler().GenerateCertAuthority(ca)
 		if err != nil {
 			return nil, nil, trace.Wrap(err)
 		}
-		log.Infof("[INIT] Set Cluster Authentication Preference: %v", cfg.AuthPreference)
 
-		if cfg.U2F != nil {
-			err = asrv.SetUniversalSecondFactor(cfg.U2F)
-			if err != nil {
-				return nil, nil, trace.Wrap(err)
-			}
-			log.Infof("[INIT] Set Universal Second Factor Settings: %v", cfg.U2F)
+		if err := asrv.Trust.UpsertCertAuthority(ca); err != nil {
+			return nil, nil, trace.Wrap(err)
 		}
-
-		if len(cfg.OIDCConnectors) > 0 {
-			for _, connector := range cfg.OIDCConnectors {
-				if err := asrv.UpsertOIDCConnector(connector); err != nil {
-					return nil, nil, trace.Wrap(err)
-				}
-				log.Infof("[INIT] Created ODIC Connector: %q", connector.GetName())
-			}
-		}
-
-		for _, role := range cfg.Roles {
-			if err := asrv.UpsertRole(role, backend.Forever); err != nil {
-				return nil, nil, trace.Wrap(err)
-			}
-			log.Infof("[INIT] Created Role: %v", role)
-		}
-
-		for i := range cfg.Authorities {
-			ca := cfg.Authorities[i]
-			ca, err = services.GetCertAuthorityMarshaler().GenerateCertAuthority(ca)
-			if err != nil {
-				return nil, nil, trace.Wrap(err)
-			}
-
-			if err := asrv.Trust.UpsertCertAuthority(ca); err != nil {
-				return nil, nil, trace.Wrap(err)
-			}
-			log.Infof("[INIT] Created Trusted Certificate Authority: %q, type: %q", ca.GetName(), ca.GetType())
-		}
-
-		for _, tunnel := range cfg.ReverseTunnels {
-			if err := asrv.UpsertReverseTunnel(tunnel); err != nil {
-				return nil, nil, trace.Wrap(err)
-			}
-			log.Infof("[INIT] Created Reverse Tunnel: %v", tunnel)
-		}
+		log.Infof("[INIT] Created Trusted Certificate Authority: %q, type: %q", ca.GetName(), ca.GetType())
 	}
+	for _, tunnel := range cfg.ReverseTunnels {
+		if err := asrv.UpsertReverseTunnel(tunnel); err != nil {
+			return nil, nil, trace.Wrap(err)
+		}
+		log.Infof("[INIT] Created Reverse Tunnel: %v", tunnel)
+	}
+
+	// always upload cluster configuration when auth service starts. the last
+	// one always wins.
+	err = asrv.SetClusterName(cfg.DomainName)
+	if err != nil {
+		return nil, nil, trace.Wrap(err)
+	}
+	log.Infof("[INIT] Updating Cluster Configuration: ClusterName: %v", cfg.DomainName)
+
+	err = asrv.SetStaticTokens(cfg.StaticTokens)
+	if err != nil {
+		return nil, nil, trace.Wrap(err)
+	}
+	log.Infof("[INIT] Updating Cluster Configuration: Static Tokens: %v", cfg.StaticTokens)
+
+	err = asrv.SetAuthPreference(cfg.AuthPreference)
+	if err != nil {
+		return nil, nil, trace.Wrap(err)
+	}
+	log.Infof("[INIT] Updating Cluster Configuration: AuthPreference: %v", cfg.AuthPreference)
 
 	// always create the default namespace
 	err = asrv.UpsertNamespace(services.NewNamespace(defaults.Namespace))
@@ -271,7 +254,10 @@ func Init(cfg InitConfig, dynamicConfig bool) (*AuthServer, *Identity, error) {
 	}
 
 	if cfg.DeveloperMode {
-		log.Warn("[INIT] Starting Teleport in developer mode. This is dangerous! Sensitive information will be logged to console and certificates will not be verified. Proceed with caution!")
+		warningMessage := "[INIT] Starting Teleport in developer mode. This is " +
+			"dangerous! Sensitive information will be logged to console and " +
+			"certificates will not be verified. Proceed with caution!"
+		log.Warn(warningMessage)
 	}
 
 	// read host keys from disk or create them if they don't exist

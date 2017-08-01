@@ -25,6 +25,7 @@ import (
 	"github.com/gravitational/trace"
 )
 
+// DEPRECATED. Remove in Teleport 2.4.
 // UniversalSecondFactorSettings defines the interface to get and set
 // Universal Second Factor settings.
 type UniversalSecondFactorSettings interface {
