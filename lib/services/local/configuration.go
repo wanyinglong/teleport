@@ -34,15 +34,21 @@ func NewClusterConfigurationService(backend backend.Backend) *ClusterConfigurati
 	}
 }
 
-// SetClusterName sets the name of the cluster in the backend.
-func (s *ClusterConfigurationService) SetClusterName(clusterName string) error {
-	c, err := services.NewClusterName(services.ClusterNameSpecV2{
-		ClusterName: clusterName,
-	})
+// GetClusterName gets the name of the cluster from the backend.
+func (s *ClusterConfigurationService) GetClusterName() (services.ClusterName, error) {
+	data, err := s.GetVal([]string{"cluster_configuration"}, "name")
 	if err != nil {
-		return trace.Wrap(err)
+		if trace.IsNotFound(err) {
+			return nil, trace.NotFound("cluster name not found")
+		}
+		return nil, trace.Wrap(err)
 	}
 
+	return services.GetClusterNameMarshaler().Unmarshal(data)
+}
+
+// SetClusterName sets the name of the cluster in the backend.
+func (s *ClusterConfigurationService) SetClusterName(c services.ClusterName) error {
 	data, err := services.GetClusterNameMarshaler().Marshal(c)
 	if err != nil {
 		return trace.Wrap(err)
@@ -56,48 +62,8 @@ func (s *ClusterConfigurationService) SetClusterName(clusterName string) error {
 	return nil
 }
 
-// GetClusterName gets the name of the cluster from the backend.
-func (s *ClusterConfigurationService) GetClusterName() (string, error) {
-	data, err := s.GetVal([]string{"cluster_configuration"}, "name")
-	if err != nil {
-		if trace.IsNotFound(err) {
-			return "", trace.NotFound("cluster name not found")
-		}
-		return "", trace.Wrap(err)
-	}
-
-	c, err := services.GetClusterNameMarshaler().Unmarshal(data)
-	if err != nil {
-		return "", trace.Wrap(err)
-	}
-
-	return c.GetClusterName(), nil
-}
-
-// SetStaticTokens sets the list of static tokens used to provision nodes.
-func (s *ClusterConfigurationService) SetStaticTokens(staticTokens []services.ProvisionToken) error {
-	c, err := services.NewStaticTokens(services.StaticTokensSpecV2{
-		StaticTokens: staticTokens,
-	})
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	data, err := services.GetStaticTokensMarshaler().Marshal(c)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	err = s.UpsertVal([]string{"cluster_configuration"}, "static_tokens", []byte(data), backend.Forever)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	return nil
-}
-
 // GetStaticTokens gets the list of static tokens used to provision nodes.
-func (s *ClusterConfigurationService) GetStaticTokens() ([]services.ProvisionToken, error) {
+func (s *ClusterConfigurationService) GetStaticTokens() (services.StaticTokens, error) {
 	data, err := s.GetVal([]string{"cluster_configuration"}, "static_tokens")
 	if err != nil {
 		if trace.IsNotFound(err) {
@@ -106,24 +72,17 @@ func (s *ClusterConfigurationService) GetStaticTokens() ([]services.ProvisionTok
 		return nil, trace.Wrap(err)
 	}
 
-	c, err := services.GetStaticTokensMarshaler().Unmarshal(data)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	return c.GetStaticTokens(), nil
-
+	return services.GetStaticTokensMarshaler().Unmarshal(data)
 }
 
-// SetAuthPreference sets the cluster authentication preferences
-// on the backend.
-func (s *ClusterConfigurationService) SetAuthPreference(preferences services.AuthPreference) error {
-	data, err := services.GetAuthPreferenceMarshaler().Marshal(preferences)
+// SetStaticTokens sets the list of static tokens used to provision nodes.
+func (s *ClusterConfigurationService) SetStaticTokens(c services.StaticTokens) error {
+	data, err := services.GetStaticTokensMarshaler().Marshal(c)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	err = s.UpsertVal([]string{"authentication", "preference"}, "general", []byte(data), backend.Forever)
+	err = s.UpsertVal([]string{"cluster_configuration"}, "static_tokens", []byte(data), backend.Forever)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -143,4 +102,20 @@ func (s *ClusterConfigurationService) GetAuthPreference() (services.AuthPreferen
 	}
 
 	return services.GetAuthPreferenceMarshaler().Unmarshal(data)
+}
+
+// SetAuthPreference sets the cluster authentication preferences
+// on the backend.
+func (s *ClusterConfigurationService) SetAuthPreference(preferences services.AuthPreference) error {
+	data, err := services.GetAuthPreferenceMarshaler().Marshal(preferences)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	err = s.UpsertVal([]string{"authentication", "preference"}, "general", []byte(data), backend.Forever)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	return nil
 }

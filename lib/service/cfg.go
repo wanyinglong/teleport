@@ -248,11 +248,13 @@ type AuthConfig struct {
 	// host nodes in the cluster that will share this authority domain name
 	// as a base name, e.g. if authority domain name is example.com,
 	// all nodes in the cluster will have UUIDs in the form: <uuid>.example.com
-	DomainName string
+	//DomainName string
+	ClusterName services.ClusterName
 
 	// StaticTokens are pre-defined host provisioning tokens supplied via config file for
 	// environments where paranoid security is not needed
-	StaticTokens []services.ProvisionToken
+	//StaticTokens []services.ProvisionToken
+	StaticTokens services.StaticTokens
 
 	// DynamicConfig determines the source of configuration truth for Teleport. File
 	// configuration or configuration that is in the backend.

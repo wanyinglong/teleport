@@ -77,12 +77,22 @@ func (s *TunSuite) SetUpTest(c *C) {
 	access := local.NewAccessService(s.bk)
 	identity := local.NewIdentityService(s.bk)
 
+	clusterName, err := services.NewClusterName(services.ClusterNameSpecV2{
+		ClusterName: "localhost",
+	})
+	c.Assert(err, IsNil)
+	staticTokens, err := services.NewStaticTokens(services.StaticTokensSpecV2{
+		StaticTokens: []services.ProvisionToken{},
+	})
+	c.Assert(err, IsNil)
+
 	s.a = NewAuthServer(&InitConfig{
-		Backend:    s.bk,
-		Authority:  authority.New(),
-		DomainName: "localhost",
-		Access:     access,
-		Identity:   identity,
+		Backend:      s.bk,
+		Authority:    authority.New(),
+		Access:       access,
+		Identity:     identity,
+		ClusterName:  clusterName,
+		StaticTokens: staticTokens,
 	})
 
 	// set up host private key and certificate
@@ -297,7 +307,7 @@ func (s *TunSuite) TestWebCreatingNewUserValidClientValidToken(c *C) {
 		SecondFactor: "otp",
 	})
 	c.Assert(err, IsNil)
-	err = s.a.SetClusterAuthPreference(ap)
+	err = s.a.SetAuthPreference(ap)
 	c.Assert(err, IsNil)
 
 	c.Assert(s.a.UpsertCertAuthority(
@@ -359,7 +369,7 @@ func (s *TunSuite) TestWebCreatingNewUserValidClientValidTokenReuseToken(c *C) {
 		SecondFactor: "otp",
 	})
 	c.Assert(err, IsNil)
-	err = s.a.SetClusterAuthPreference(ap)
+	err = s.a.SetAuthPreference(ap)
 	c.Assert(err, IsNil)
 
 	c.Assert(s.a.UpsertCertAuthority(

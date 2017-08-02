@@ -51,7 +51,8 @@ type InitConfig struct {
 
 	// DomainName stores the FQDN of the signing CA (its certificate will have this
 	// name embedded). It is usually set to the GUID of the host the Auth service runs on
-	DomainName string
+	//DomainName string
+	ClusterName services.ClusterName
 
 	// Authorities is a list of pre-configured authorities to supply on first start
 	Authorities []services.CertAuthority
@@ -101,7 +102,8 @@ type InitConfig struct {
 
 	// StaticTokens are pre-defined host provisioning tokens supplied via config file for
 	// environments where paranoid security is not needed
-	StaticTokens []services.ProvisionToken
+	//StaticTokens []services.ProvisionToken
+	StaticTokens services.StaticTokens
 
 	// AuthPreference defines the authentication type (local, oidc) and second
 	// factor (off, otp, u2f) passed in from a configuration file.
@@ -125,11 +127,12 @@ func Init(cfg InitConfig, dynamicConfig bool) (*AuthServer, *Identity, error) {
 		return nil, nil, trace.BadParameter("HostUUID: host UUID can not be empty")
 	}
 
-	err := cfg.Backend.AcquireLock(cfg.DomainName, 30*time.Second)
+	// TODO(russjones): Can we swap out cfg.ClusterName.GetClusterName() here for cfg.HostUUID?
+	err := cfg.Backend.AcquireLock(cfg.HostUUID, 30*time.Second)
 	if err != nil {
 		return nil, nil, trace.Wrap(err)
 	}
-	defer cfg.Backend.ReleaseLock(cfg.DomainName)
+	defer cfg.Backend.ReleaseLock(cfg.HostUUID)
 
 	// check that user CA and host CA are present and set the certs if needed
 	asrv := NewAuthServer(&cfg)
@@ -164,11 +167,11 @@ func Init(cfg InitConfig, dynamicConfig bool) (*AuthServer, *Identity, error) {
 
 	// always upload cluster configuration when auth service starts. the last
 	// one always wins.
-	err = asrv.SetClusterName(cfg.DomainName)
+	err = asrv.SetClusterName(cfg.ClusterName)
 	if err != nil {
 		return nil, nil, trace.Wrap(err)
 	}
-	log.Infof("[INIT] Updating Cluster Configuration: ClusterName: %v", cfg.DomainName)
+	log.Infof("[INIT] Updating Cluster Configuration: ClusterName: %v", cfg.ClusterName)
 
 	err = asrv.SetStaticTokens(cfg.StaticTokens)
 	if err != nil {
@@ -190,7 +193,7 @@ func Init(cfg InitConfig, dynamicConfig bool) (*AuthServer, *Identity, error) {
 	log.Infof("[INIT] Created Namespace: %q", defaults.Namespace)
 
 	// generate a user certificate authority if it doesn't exist
-	if _, err := asrv.GetCertAuthority(services.CertAuthID{DomainName: cfg.DomainName, Type: services.UserCA}, false); err != nil {
+	if _, err := asrv.GetCertAuthority(services.CertAuthID{DomainName: cfg.ClusterName.GetClusterName(), Type: services.UserCA}, false); err != nil {
 		if !trace.IsNotFound(err) {
 			return nil, nil, trace.Wrap(err)
 		}
@@ -205,11 +208,11 @@ func Init(cfg InitConfig, dynamicConfig bool) (*AuthServer, *Identity, error) {
 			Kind:    services.KindCertAuthority,
 			Version: services.V2,
 			Metadata: services.Metadata{
-				Name:      cfg.DomainName,
+				Name:      cfg.ClusterName.GetClusterName(),
 				Namespace: defaults.Namespace,
 			},
 			Spec: services.CertAuthoritySpecV2{
-				ClusterName:  cfg.DomainName,
+				ClusterName:  cfg.ClusterName.GetClusterName(),
 				Type:         services.UserCA,
 				SigningKeys:  [][]byte{priv},
 				CheckingKeys: [][]byte{pub},
@@ -222,7 +225,7 @@ func Init(cfg InitConfig, dynamicConfig bool) (*AuthServer, *Identity, error) {
 	}
 
 	// generate a host certificate authority if it doesn't exist
-	if _, err := asrv.GetCertAuthority(services.CertAuthID{DomainName: cfg.DomainName, Type: services.HostCA}, false); err != nil {
+	if _, err := asrv.GetCertAuthority(services.CertAuthID{DomainName: cfg.ClusterName.GetClusterName(), Type: services.HostCA}, false); err != nil {
 		if !trace.IsNotFound(err) {
 			return nil, nil, trace.Wrap(err)
 		}
@@ -237,11 +240,11 @@ func Init(cfg InitConfig, dynamicConfig bool) (*AuthServer, *Identity, error) {
 			Kind:    services.KindCertAuthority,
 			Version: services.V2,
 			Metadata: services.Metadata{
-				Name:      cfg.DomainName,
+				Name:      cfg.ClusterName.GetClusterName(),
 				Namespace: defaults.Namespace,
 			},
 			Spec: services.CertAuthoritySpecV2{
-				ClusterName:  cfg.DomainName,
+				ClusterName:  cfg.ClusterName.GetClusterName(),
 				Type:         services.HostCA,
 				SigningKeys:  [][]byte{priv},
 				CheckingKeys: [][]byte{pub},
@@ -440,7 +443,7 @@ func isFirstStart(authServer *AuthServer, cfg InitConfig) (bool, error) {
 	// check if the CA exists?
 	_, err := authServer.GetCertAuthority(
 		services.CertAuthID{
-			DomainName: cfg.DomainName,
+			DomainName: cfg.ClusterName.GetClusterName(),
 			Type:       services.HostCA,
 		}, false)
 	if err != nil {

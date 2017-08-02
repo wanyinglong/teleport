@@ -75,10 +75,19 @@ func (s *APISuite) SetUpTest(c *C) {
 	s.alog, err = events.NewAuditLog(dir)
 	c.Assert(err, IsNil)
 
+	clusterName, err := services.NewClusterName(services.ClusterNameSpecV2{
+		ClusterName: "localhost",
+	})
+	c.Assert(err, IsNil)
+	staticTokens, err := services.NewStaticTokens(services.StaticTokensSpecV2{
+		StaticTokens: []services.ProvisionToken{},
+	})
+	c.Assert(err, IsNil)
 	s.a = NewAuthServer(&InitConfig{
-		Backend:    s.bk,
-		Authority:  authority.New(),
-		DomainName: "localhost",
+		Backend:      s.bk,
+		Authority:    authority.New(),
+		ClusterName:  clusterName,
+		StaticTokens: staticTokens,
 	})
 	s.sessions, err = session.New(s.bk)
 	c.Assert(err, IsNil)

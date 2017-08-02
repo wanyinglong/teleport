@@ -674,37 +674,37 @@ func (a *AuthWithRoles) DeleteRole(name string) error {
 	return a.authServer.DeleteRole(name)
 }
 
+// GetClusterName gets the name of the cluster.
+func (a *AuthWithRoles) GetClusterName() (services.ClusterName, error) {
+	if err := a.action(defaults.Namespace, services.KindAuthServer, services.ActionRead); err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return a.authServer.GetClusterName()
+}
+
 // SetClusterName sets the name of the cluster.
-func (a *AuthWithRoles) SetClusterName(c string) error {
+func (a *AuthWithRoles) SetClusterName(c services.ClusterName) error {
 	if err := a.action(defaults.Namespace, services.KindAuthServer, services.ActionWrite); err != nil {
 		return trace.Wrap(err)
 	}
 	return a.authServer.SetClusterName(c)
 }
 
-// GetClusterName gets the name of the cluster.
-func (a *AuthWithRoles) GetClusterName() (string, error) {
-	if err := a.action(defaults.Namespace, services.KindAuthServer, services.ActionRead); err != nil {
-		return "", trace.Wrap(err)
-	}
-
-	return a.authServer.GetClusterName()
-}
-
-// SetStaticTokens sets the list of static tokens used to provision nodes.
-func (a *AuthWithRoles) SetStaticTokens(s []services.ProvisionToken) error {
-	if err := a.action(defaults.Namespace, services.KindAuthServer, services.ActionWrite); err != nil {
-		return trace.Wrap(err)
-	}
-	return a.authServer.SetStaticTokens(s)
-}
-
 // GetStaticTokens gets the list of static tokens used to provision nodes.
-func (a *AuthWithRoles) GetStaticTokens() ([]services.ProvisionToken, error) {
+func (a *AuthWithRoles) GetStaticTokens() (services.StaticTokens, error) {
 	if err := a.action(defaults.Namespace, services.KindAuthServer, services.ActionWrite); err != nil {
 		return nil, trace.Wrap(err)
 	}
 	return a.authServer.GetStaticTokens()
+}
+
+// SetStaticTokens sets the list of static tokens used to provision nodes.
+func (a *AuthWithRoles) SetStaticTokens(s services.StaticTokens) error {
+	if err := a.action(defaults.Namespace, services.KindAuthServer, services.ActionWrite); err != nil {
+		return trace.Wrap(err)
+	}
+	return a.authServer.SetStaticTokens(s)
 }
 
 func (a *AuthWithRoles) GetAuthPreference() (services.AuthPreference, error) {

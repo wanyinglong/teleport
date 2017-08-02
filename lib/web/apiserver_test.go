@@ -165,30 +165,34 @@ func (s *WebSuite) SetUpTest(c *C) {
 	trust := local.NewCAService(s.bk)
 
 	s.domainName = "localhost"
+	clusterName, err := services.NewClusterName(services.ClusterNameSpecV2{
+		ClusterName: s.domainName,
+	})
+	c.Assert(err, IsNil)
+	staticTokens, err := services.NewStaticTokens(services.StaticTokensSpecV2{
+		StaticTokens: []services.ProvisionToken{},
+	})
+	c.Assert(err, IsNil)
 	s.authServer = auth.NewAuthServer(&auth.InitConfig{
-		Backend:    s.bk,
-		Authority:  authority.New(),
-		DomainName: s.domainName,
-		Identity:   identity,
-		Access:     access,
+		Backend:      s.bk,
+		Authority:    authority.New(),
+		Identity:     identity,
+		Access:       access,
+		ClusterName:  clusterName,
+		StaticTokens: staticTokens,
 	})
 
 	// configure cluster authentication preferences
 	cap, err := services.NewAuthPreference(services.AuthPreferenceSpecV2{
 		Type:         teleport.Local,
 		SecondFactor: teleport.U2F,
+		U2F: &services.U2F{
+			AppID:  "https://" + s.domainName,
+			Facets: []string{"https://" + s.domainName},
+		},
 	})
 	c.Assert(err, IsNil)
-	err = s.authServer.SetClusterAuthPreference(cap)
-	c.Assert(err, IsNil)
-
-	// configure u2f
-	universalSecondFactor, err := services.NewUniversalSecondFactor(services.UniversalSecondFactorSpecV2{
-		AppID:  "https://" + s.domainName,
-		Facets: []string{"https://" + s.domainName},
-	})
-	c.Assert(err, IsNil)
-	err = s.authServer.SetUniversalSecondFactor(universalSecondFactor)
+	err = s.authServer.SetAuthPreference(cap)
 	c.Assert(err, IsNil)
 
 	teleUser, err := services.NewUser(s.user)
@@ -338,7 +342,7 @@ func (s *WebSuite) SetUpTest(c *C) {
 		SecondFactor: teleport.OTP,
 	})
 	c.Assert(err, IsNil)
-	err = s.authServer.SetClusterAuthPreference(cap)
+	err = s.authServer.SetAuthPreference(cap)
 	c.Assert(err, IsNil)
 }
 
@@ -1011,6 +1015,19 @@ func removeSpace(in string) string {
 }
 
 func (s *WebSuite) TestNewU2FUser(c *C) {
+	// configure cluster authentication preferences
+	cap, err := services.NewAuthPreference(services.AuthPreferenceSpecV2{
+		Type:         teleport.Local,
+		SecondFactor: teleport.U2F,
+		U2F: &services.U2F{
+			AppID:  "https://" + s.domainName,
+			Facets: []string{"https://" + s.domainName},
+		},
+	})
+	c.Assert(err, IsNil)
+	err = s.authServer.SetAuthPreference(cap)
+	c.Assert(err, IsNil)
+
 	token, err := s.roleAuth.CreateSignupToken(services.UserV1{Name: "bob", AllowedLogins: []string{s.user}})
 	c.Assert(err, IsNil)
 
@@ -1074,6 +1091,19 @@ func (s *WebSuite) TestNewU2FUser(c *C) {
 }
 
 func (s *WebSuite) TestU2FLogin(c *C) {
+	// configure cluster authentication preferences
+	cap, err := services.NewAuthPreference(services.AuthPreferenceSpecV2{
+		Type:         teleport.Local,
+		SecondFactor: teleport.U2F,
+		U2F: &services.U2F{
+			AppID:  "https://" + s.domainName,
+			Facets: []string{"https://" + s.domainName},
+		},
+	})
+	c.Assert(err, IsNil)
+	err = s.authServer.SetAuthPreference(cap)
+	c.Assert(err, IsNil)
+
 	token, err := s.roleAuth.CreateSignupToken(services.UserV1{Name: "bob", AllowedLogins: []string{s.user}})
 	c.Assert(err, IsNil)
 

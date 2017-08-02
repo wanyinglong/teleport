@@ -161,7 +161,7 @@ type AuthPreferenceSpecV2 struct {
 	SecondFactor string `json:"second_factor"`
 
 	// U2F are the settings for the U2F device.
-	U2F *U2F
+	U2F *U2F `json:"u2f,omitempty"`
 }
 
 // U2F defines settings for U2F device.

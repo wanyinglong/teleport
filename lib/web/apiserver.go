@@ -354,7 +354,13 @@ func (m *Handler) getUserACL(w http.ResponseWriter, r *http.Request, _ httproute
 }
 
 func buildUniversalSecondFactorSettings(authClient auth.ClientI) *client.U2FSettings {
-	universalSecondFactor, err := authClient.GetUniversalSecondFactor()
+	cap, err := authClient.GetAuthPreference()
+	if err != nil {
+		log.Debugf("Unable to get U2F Settings: %v", err)
+		return nil
+	}
+
+	universalSecondFactor, err := cap.GetU2F()
 	if err != nil {
 		// if we have nothing set on the backend, return we have nothing
 		if trace.IsNotFound(err) {
@@ -365,7 +371,7 @@ func buildUniversalSecondFactorSettings(authClient auth.ClientI) *client.U2FSett
 		return nil
 	}
 
-	return &client.U2FSettings{AppID: universalSecondFactor.GetAppID()}
+	return &client.U2FSettings{AppID: universalSecondFactor.AppID}
 }
 
 func buildOIDCConnectorSettings(authClient auth.ClientI) *client.OIDCSettings {
@@ -419,7 +425,7 @@ func buildSAMLConnectorSettings(authClient auth.ClientI) *client.SAMLSettings {
 func buildAuthenticationSettings(authClient auth.ClientI) (*client.AuthenticationSettings, error) {
 	as := &client.AuthenticationSettings{}
 
-	cap, err := authClient.GetClusterAuthPreference()
+	cap, err := authClient.GetAuthPreference()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -735,7 +741,7 @@ func (m *Handler) createSession(w http.ResponseWriter, r *http.Request, p httpro
 	// get cluster preferences to see if we should login
 	// with password or password+otp
 	authClient := m.cfg.ProxyClient
-	cap, err := authClient.GetClusterAuthPreference()
+	cap, err := authClient.GetAuthPreference()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -1584,7 +1590,7 @@ func (h *Handler) createSSHCert(w http.ResponseWriter, r *http.Request, p httpro
 	}
 
 	authClient := h.cfg.ProxyClient
-	cap, err := authClient.GetClusterAuthPreference()
+	cap, err := authClient.GetAuthPreference()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}

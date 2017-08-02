@@ -1590,30 +1590,81 @@ func (s *APIServer) getRoles(auth ClientI, w http.ResponseWriter, r *http.Reques
 	return out, nil
 }
 
-//func (s *APIServer) deleteRole(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
-//	role := p.ByName("role")
-//	if err := auth.DeleteRole(role); err != nil {
-//		return nil, trace.Wrap(err)
-//	}
-//	return message(fmt.Sprintf("role '%v' deleted", role)), nil
-//}
-//
-//func (s *APIServer) getClusterName(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
-//	c, err := auth.GetClusterName()
-//	if err != nil {
-//		return nil, trace.Wrap(err)
-//	}
-//
-//}
-//
-//func (s *APIServer) setClusterName(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
-//}
-//
-//func (s *APIServer) getStaticTokens(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
-//}
-//
-//func (s *APIServer) setStaticTokens(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
-//}
+func (s *APIServer) deleteRole(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+	role := p.ByName("role")
+	if err := auth.DeleteRole(role); err != nil {
+		return nil, trace.Wrap(err)
+	}
+	return message(fmt.Sprintf("role '%v' deleted", role)), nil
+}
+
+func (s *APIServer) getClusterName(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+	cn, err := auth.GetClusterName()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return rawMessage(services.GetClusterNameMarshaler().Marshal(cn, services.WithVersion(version)))
+}
+
+type setClusterNameReq struct {
+	ClusterName json.RawMessage `json:"cluster_name"`
+}
+
+func (s *APIServer) setClusterName(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+	var req *setClusterNameReq
+
+	err := httplib.ReadJSON(r, &req)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	cn, err := services.GetClusterNameMarshaler().Unmarshal(req.ClusterName)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	err = auth.SetClusterName(cn)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return message(fmt.Sprintf("cluster name set: %+v", cn)), nil
+}
+
+func (s *APIServer) getStaticTokens(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+	st, err := auth.GetStaticTokens()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return rawMessage(services.GetStaticTokensMarshaler().Marshal(st, services.WithVersion(version)))
+}
+
+type setStaticTokensReq struct {
+	StaticTokens json.RawMessage `json:"static_tokens"`
+}
+
+func (s *APIServer) setStaticTokens(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
+	var req *setStaticTokensReq
+
+	err := httplib.ReadJSON(r, &req)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	st, err := services.GetStaticTokensMarshaler().Unmarshal(req.StaticTokens)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	err = auth.SetStaticTokens(st)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return message(fmt.Sprintf("static tokens set: %+v", st)), nil
+}
 
 func (s *APIServer) getClusterAuthPreference(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
 	cap, err := auth.GetAuthPreference()

@@ -20,18 +20,18 @@ package services
 // the resources modified by this interface can only have a single instance
 // in the backend.
 type ClusterConfiguration interface {
-	// SetClusterName sets the name of the cluster.
-	SetClusterName(string) error
-	// GetClusterName gets the name of the cluster.
-	GetClusterName() (string, error)
+	// SetClusterName gets services.ClusterName from the backend.
+	GetClusterName() (ClusterName, error)
+	// SetClusterName sets services.ClusterName on the backend.
+	SetClusterName(ClusterName) error
 
-	// SetStaticTokens sets the list of static tokens used to provision nodes.
-	SetStaticTokens([]ProvisionToken) error
-	// GetStaticTokens gets the list of static tokens used to provision nodes.
-	GetStaticTokens() ([]ProvisionToken, error)
+	// GetStaticTokens gets services.StaticTokens from the backend.
+	GetStaticTokens() (StaticTokens, error)
+	// SetStaticTokens sets services.StaticTokens on the backend.
+	SetStaticTokens(StaticTokens) error
 
-	// GetAuthPreference returns the authentication preferences for a cluster.
+	// GetAuthPreference gets services.AuthPreference from the backend.
 	GetAuthPreference() (AuthPreference, error)
-	// SetAuthPreference sets the authentication preferences for a cluster.
+	// SetAuthPreference sets services.AuthPreference from the backend.
 	SetAuthPreference(AuthPreference) error
 }

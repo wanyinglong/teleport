@@ -1309,6 +1309,62 @@ func (c *Client) DeleteRole(name string) error {
 	return trace.Wrap(err)
 }
 
+func (c *Client) GetClusterName() (services.ClusterName, error) {
+	out, err := c.Get(c.Endpoint("configuration", "name"), url.Values{})
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	cn, err := services.GetClusterNameMarshaler().Unmarshal(out.Bytes())
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return cn, err
+}
+
+func (c *Client) SetClusterName(cn services.ClusterName) error {
+	data, err := services.GetClusterNameMarshaler().Marshal(cn)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	_, err = c.PostJSON(c.Endpoint("configuration", "name"), &setClusterNameReq{ClusterName: data})
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	return nil
+}
+
+func (c *Client) GetStaticTokens() (services.StaticTokens, error) {
+	out, err := c.Get(c.Endpoint("configuration", "static_tokens"), url.Values{})
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	st, err := services.GetStaticTokensMarshaler().Unmarshal(out.Bytes())
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return st, err
+}
+
+func (c *Client) SetStaticTokens(st services.StaticTokens) error {
+	data, err := services.GetStaticTokensMarshaler().Marshal(st)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	_, err = c.PostJSON(c.Endpoint("configuration", "static_tokens"), &setStaticTokensReq{StaticTokens: data})
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	return nil
+}
+
 func (c *Client) GetAuthPreference() (services.AuthPreference, error) {
 	out, err := c.Get(c.Endpoint("authentication", "preference"), url.Values{})
 	if err != nil {

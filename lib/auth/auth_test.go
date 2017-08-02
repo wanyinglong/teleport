@@ -58,10 +58,19 @@ func (s *AuthSuite) SetUpTest(c *C) {
 	s.bk, err = boltbk.New(backend.Params{"path": c.MkDir()})
 	c.Assert(err, IsNil)
 
+	clusterName, err := services.NewClusterName(services.ClusterNameSpecV2{
+		ClusterName: "me.localhost",
+	})
+	c.Assert(err, IsNil)
+	staticTokens, err := services.NewStaticTokens(services.StaticTokensSpecV2{
+		StaticTokens: []services.ProvisionToken{},
+	})
+	c.Assert(err, IsNil)
 	authConfig := &InitConfig{
-		Backend:    s.bk,
-		Authority:  authority.New(),
-		DomainName: "me.localhost",
+		Backend:      s.bk,
+		Authority:    authority.New(),
+		ClusterName:  clusterName,
+		StaticTokens: staticTokens,
 	}
 	s.a = NewAuthServer(authConfig)
 }

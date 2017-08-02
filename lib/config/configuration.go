@@ -334,15 +334,15 @@ func ApplyFileConfig(fc *FileConfig, cfg *service.Config) error {
 			"anymore. Refer to Teleport documentation for more details: https://www.example.com."
 		log.Warnf(warningMessage)
 	}
-	// read in and set the cluster name
-	cfg.Auth.DomainName = fc.Auth.DomainName
-	// read in and set any static tokens used to provision nodes
-	for _, token := range fc.Auth.StaticTokens {
-		roles, tokenValue, err := token.Parse()
-		if err != nil {
-			return trace.Wrap(err)
-		}
-		cfg.Auth.StaticTokens = append(cfg.Auth.StaticTokens, services.ProvisionToken{Token: tokenValue, Roles: roles, Expires: time.Unix(0, 0)})
+	// read in cluster name from file configuration and create services.ClusterName
+	cfg.Auth.ClusterName, err = fc.Auth.ClusterName.Parse()
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	// read in static tokens from file configuration and create services.StaticTokens
+	cfg.Auth.StaticTokens, err = fc.Auth.StaticTokens.Parse()
+	if err != nil {
+		return trace.Wrap(err)
 	}
 	// read in and set authentication preferences
 	if fc.Auth.Authentication != nil {
